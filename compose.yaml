@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: barber
+      POSTGRES_PASSWORD: barber_local_only
+      POSTGRES_DB: barber
+    ports:
+      - "127.0.0.1:5547:5432"
+    volumes:
+      - barber_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U barber"]
+      interval: 3s
+      retries: 15
+volumes:
+  barber_data:
