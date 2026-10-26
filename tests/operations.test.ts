@@ -21,7 +21,10 @@ async function post(path: string, body: object, session?: string) {
       "Content-Type": "application/json",
       ...(session ? { Cookie: session } : {}),
     },
-    body: JSON.stringify({ idempotencyKey: randomUUID(), ...body }),
+    body: JSON.stringify({
+      ...(path === "/api/data" ? { idempotencyKey: randomUUID() } : {}),
+      ...body,
+    }),
   });
 }
 async function ok(path: string, body: object, session = cookie) {
@@ -434,6 +437,259 @@ test("jornada, bloqueio, remarcação atômica e gestão pelo link pessoal", asy
     0,
   );
 });
+test("corte avulso mantém histórico, divisão, recebimento idempotente e limites do profissional", async () => {
+  const p = (
+    await ok("/api/settings", {
+      action: "professional",
+      name: "Avulso QA",
+      specialty: "Cortes",
+      color: "#aabbcc",
+      commissionBps: 6000,
+      commissionKind: "percent",
+      commissionFixed: 0,
+      active: true,
+    })
+  ).id;
+  const svc = (
+    await ok("/api/settings", {
+      action: "service",
+      name: "Avulso QA",
+      description: "Teste",
+      price: 5000,
+      duration: 30,
+      commissionBps: null,
+      active: true,
+    })
+  ).id;
+  const body = {
+    action: "walk_in",
+    professionalId: p,
+    serviceId: svc,
+    customer: "Avulso fictício QA",
+    quotedPrice: 5000,
+    received: true,
+    method: "Cartão",
+    tip: 300,
+    fee: 100,
+    idempotencyKey: randomUUID(),
+  };
+  const first = await ok("/api/data", body);
+  assert.equal((await ok("/api/data", body)).id, first.id);
+  const row = (await get("/api/appointments/" + first.id)).appointment;
+  assert.equal(row.source, "walk_in");
+  assert.equal(row.status, "completed");
+  assert.equal(row.price, 5000);
+  assert.equal(row.commission, 3000);
+  assert.equal(row.paid, 5000);
+  assert.equal(row.consent, false);
+  assert.equal(
+    (
+      await db.query("SELECT id FROM resource_slots WHERE appointment_id=$1", [
+        first.id,
+      ])
+    ).rowCount,
+    0,
+  );
+  assert.equal(
+    (
+      await db.query("SELECT id FROM notifications WHERE appointment_id=$1", [
+        first.id,
+      ])
+    ).rowCount,
+    0,
+  );
+  assert.equal(
+    (
+      await db.query("SELECT id FROM payments WHERE appointment_id=$1", [
+        first.id,
+      ])
+    ).rowCount,
+    1,
+  );
+  let finance = await get("/api/finance");
+  let balance = finance.balances.find(
+    (b: { professional_id: string }) => b.professional_id === p,
+  );
+  assert.equal(balance.released, 3000);
+  assert.equal(balance.tips, 300);
+  assert.equal(balance.available, 3300);
+  const unpaid = await ok("/api/data", {
+    ...body,
+    received: false,
+    tip: 0,
+    fee: 0,
+    idempotencyKey: randomUUID(),
+  });
+  assert.equal(
+    (await get("/api/appointments/" + unpaid.id)).appointment.paid,
+    0,
+  );
+  finance = await get("/api/finance");
+  balance = finance.balances.find(
+    (b: { professional_id: string }) => b.professional_id === p,
+  );
+  assert.equal(balance.generated, 6000);
+  assert.equal(balance.released, 3000);
+  const count = (
+    await db.query(
+      "SELECT count(*)::int n FROM appointments WHERE tenant_id=$1",
+      [tenant],
+    )
+  ).rows[0].n;
+  assert.equal(
+    (
+      await post(
+        "/api/data",
+        { ...body, method: "Dinheiro", idempotencyKey: randomUUID() },
+        cookie,
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await db.query(
+        "SELECT count(*)::int n FROM appointments WHERE tenant_id=$1",
+        [tenant],
+      )
+    ).rows[0].n,
+    count,
+  );
+  // A completed walk-in is historical: it cannot reserve time or bypass booking conflicts.
+  const planned = (
+    await db.query(
+      "INSERT INTO appointments(tenant_id,professional_id,service_id,customer,phone,starts_at,ends_at,price,list_price,commission_bps,commission,manage_hash) VALUES($1,$2,$3,'Reserva QA','',now()-interval '10 minutes',now()+interval '20 minutes',5000,5000,6000,3000,$4) RETURNING id",
+      [tenant, p, svc, randomUUID()],
+    )
+  ).rows[0];
+  await assert.rejects(
+    db.query(
+      "INSERT INTO appointments(tenant_id,professional_id,service_id,customer,phone,starts_at,ends_at,price,list_price,commission_bps,commission,manage_hash) VALUES($1,$2,$3,'Conflito QA','',now()-interval '5 minutes',now()+interval '15 minutes',5000,5000,6000,3000,$4)",
+      [tenant, p, svc, randomUUID()],
+    ),
+    (e: unknown) => (e as { code: string }).code === "23P01",
+  );
+  const mail = "avulso-" + email;
+  await ok("/api/settings", {
+    action: "user_create",
+    name: "Avulso QA",
+    email: mail,
+    password,
+    role: "barber",
+    professionalId: p,
+  });
+  const barber = await login(mail);
+  assert.equal(
+    (
+      await post(
+        "/api/data",
+        { ...body, professionalId: pro, idempotencyKey: randomUUID() },
+        barber,
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await post(
+        "/api/data",
+        { ...body, price: 100, idempotencyKey: randomUUID() },
+        barber,
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await fetch(base + "/api/cuts?professionalId=" + pro, {
+        headers: { Cookie: barber },
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await fetch(base + "/api/walk-ins?professionalId=" + pro, {
+        headers: { Cookie: barber },
+      })
+    ).status,
+    403,
+  );
+  const own = await get("/api/my-profile", barber);
+  assert.equal(own.professional.id, p);
+  assert.equal(
+    (
+      await post(
+        "/api/my-profile",
+        {
+          name: "Tentativa QA",
+          specialty: "Cortes",
+          color: "#aabbcc",
+          commissionBps: 10000,
+        },
+        barber,
+      )
+    ).status,
+    400,
+  );
+  await ok(
+    "/api/my-profile",
+    { name: "Avulso QA atualizado", specialty: "Cortes", color: "#aabbcc" },
+    barber,
+  );
+  await db.query(
+    "INSERT INTO notifications(appointment_id,kind,due_at,status) VALUES($1,'confirmation',now(),'simulated')",
+    [planned.id],
+  );
+  const otherAppointment = (
+    await db.query(
+      "SELECT id FROM appointments WHERE tenant_id=$1 AND professional_id=$2 LIMIT 1",
+      [tenant, pro],
+    )
+  ).rows[0];
+  await db.query(
+    "INSERT INTO notifications(appointment_id,kind,due_at,status) VALUES($1,'qa_isolation',now(),'simulated')",
+    [otherAppointment.id],
+  );
+  const ownData = await get("/api/data", barber);
+  assert.ok(ownData.notifications.length > 0);
+  assert.ok(
+    ownData.notifications.every(
+      (n: { professional_id: string }) => n.professional_id === p,
+    ),
+  );
+  assert.ok(
+    (await get("/api/cuts", barber)).appointments.every(
+      (a: { professional_id: string }) => a.professional_id === p,
+    ),
+  );
+  assert.ok(
+    (await get("/api/finance", barber)).balances.every(
+      (b: { professional_id: string }) => b.professional_id === p,
+    ),
+  );
+  await ok(
+    "/api/data",
+    { ...body, received: false, tip: 0, fee: 0, idempotencyKey: randomUUID() },
+    barber,
+  );
+  await ok("/api/settings", {
+    action: "professional",
+    id: p,
+    name: "Avulso QA",
+    specialty: "Cortes",
+    color: "#aabbcc",
+    commissionBps: 5000,
+    commissionKind: "percent",
+    commissionFixed: 0,
+    active: true,
+  });
+  assert.equal(
+    (await get("/api/appointments/" + first.id)).appointment.commission,
+    3000,
+  );
+});
+
 test("perfis individuais, isolamento entre barbearias e TV revogável", async () => {
   const accounts = [
     {

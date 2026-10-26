@@ -58,3 +58,18 @@ Não validado como produção: autenticação individual, acessibilidade integra
 Limites: instalação em celular físico e Smart TV não realizada; webhook real e entrega de WhatsApp não homologados; publicação/persistência na hospedagem ainda não verificadas. A ampliação substitui as pendências já concluídas descritas nas seções históricas acima.
 
 - Commit bdbee05: esteira GitHub concluída com sucesso (typecheck, 18 testes e build). Pacote Linux compilado também em Docker local: 185.477.283 bytes, SHA256 45FB6DA187F5DF697807B1851DDBFE87D3C280F795FBF64403720303EA86C074. Nenhum arquivo de ambiente incluído no pacote.
+
+## Evidência pública — 26/10/2026
+
+- Aplicação ShardCloud 9668b057-f1f9-4f9d-a582-c7f5cb1dc30a publicada em HTTPS; /api/health retornou ready, postgresql, demo=true e release 1070c0afea82f9f8c7d4160128cb59004b0e752b.
+- `node scripts/qa-publication.mjs prepare`: login, readonly, 401/403, PDF, manifest/ícones/service worker, dados mínimos de TV e reserva pública fictícia aprovados.
+- `node scripts/qa-publication.mjs verify`: sessão e reserva encontradas após reinício pelo painel. Reserva de QA cancelada, sem exclusão de histórico ou envio de WhatsApp.
+- PDF público salvo em output/pdf/relatorio-publicado.pdf: dez páginas A4; capa renderizada e conferida. Cabeçalhos HTTP efetivos: nosniff e SAMEORIGIN, sem X-Powered-By.
+- Módulos pg e PDFKit, inclusive suas fontes, carregados do pacote reestruturado antes do envio. A primeira implantação revelou que o upload removia node_modules aninhados; a correção preserva-os em vendor e recria vínculos na inicialização.
+- Navegador integrado: demonstração pública em 375 px sem overflow, menu fecha pelo X e por toque fora, rolagem liberada; botão de fechar instruções PWA visível.
+- Memória reservada: 512 MB. O painel observou 107 MB em um dos momentos da validação; o valor varia com carga e inclui picos de instalação. Isso não é ensaio de carga.
+- Evidências visuais: docs/evidencias/publicado-mobile.png, publicado-menu-mobile.png e publicado-desktop.png.
+
+Não realizados: instalação física PWA, pareamento físico de TV, envio real de WhatsApp, teste de carga ou recuperação completa da hospedagem. Backup/restauração anteriores são locais; esta verificação pública confirma persistência após reinício da aplicação.
+
+- Ajuste final da TV, fonte 3ef5777: prévia local com três profissionais em 1280x720, 1366x768 e 1920x1080, sem overflow horizontal ou vertical. A versão final substitui a altura anterior que excedia Full HD.

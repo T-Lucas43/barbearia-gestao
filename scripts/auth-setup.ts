@@ -51,18 +51,38 @@ export async function setupAuth() {
     console.log("Conta local criada:", account.email);
   }
   if (process.env.DEMO_MODE === "true") {
-    const email = "demo@navalha.local";
-    let u = (await db.query("SELECT id FROM auth_user WHERE email=$1", [email]))
-      .rows[0];
-    if (!u)
-      u = (
-        await auth.api.signUpEmail({
-          body: { name: "Demonstração", email, password: "DemoNavalha2026!" },
-        })
-      ).user;
-    await db.query(
-      "INSERT INTO memberships(user_id,tenant_id,role,read_only) VALUES ($1,'demo','owner',true) ON CONFLICT(user_id) DO UPDATE SET read_only=true WHERE memberships.tenant_id='demo'",
-      [u.id],
-    );
+    for (const account of [
+      {
+        email: "demo@navalha.local",
+        name: "Rafael · Gestor e barbeiro",
+        role: "owner",
+        professional: "rafa",
+      },
+      {
+        email: "profissional@navalha.local",
+        name: "Leonardo · Profissional",
+        role: "barber",
+        professional: "leo",
+      },
+    ]) {
+      const email = account.email;
+      let u = (
+        await db.query("SELECT id FROM auth_user WHERE email=$1", [email])
+      ).rows[0];
+      if (!u)
+        u = (
+          await auth.api.signUpEmail({
+            body: { name: account.name, email, password: "DemoNavalha2026!" },
+          })
+        ).user;
+      await db.query(
+        "INSERT INTO memberships(user_id,tenant_id,role,professional_id,read_only,is_demo) VALUES ($1,'demo',$2,$3,false,true) ON CONFLICT(user_id) DO UPDATE SET role=excluded.role,professional_id=excluded.professional_id,read_only=false,is_demo=true,active=true WHERE memberships.tenant_id='demo'",
+        [u.id, account.role, account.professional],
+      );
+      await db.query("UPDATE auth_user SET name=$2 WHERE id=$1", [
+        u.id,
+        account.name,
+      ]);
+    }
   }
 }

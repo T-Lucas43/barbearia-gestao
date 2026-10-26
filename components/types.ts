@@ -33,10 +33,12 @@ export type Appointment = {
   paid: number;
   list_price?: number;
   discount?: number;
+  source?: "booking" | "walk_in";
 };
 export type Data = {
   role: string;
   readOnly?: boolean;
+  isDemo?: boolean;
   whatsappEnabled?: boolean;
   name: string;
   tenant: {
@@ -80,6 +82,7 @@ export type Data = {
     status: string;
     due_at: string;
     last_error?: string;
+    professional_id?: string;
   }[];
   totals: {
     service_total: number;

@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import {
   Plus,
   Save,
@@ -141,12 +141,17 @@ function ProSelect({
 export default function SettingsPanel({
   onChanged,
   readOnly = false,
+  demo = false,
 }: {
   onChanged: () => Promise<void>;
   readOnly?: boolean;
+  demo?: boolean;
 }) {
   const [data, setData] = useState<Config>();
   const [section, setSection] = useState("shop");
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [section]);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -228,20 +233,22 @@ export default function SettingsPanel({
         role="group"
         aria-label="Seções de configuração"
       >
-        {sections.map((s) => (
-          <button
-            key={s.id}
-            className={section === s.id ? "selected" : ""}
-            onClick={() => {
-              setSection(s.id);
-              setError("");
-              setNotice("");
-            }}
-          >
-            <s.icon size={16} />
-            {s.label}
-          </button>
-        ))}
+        {sections
+          .filter((s) => !demo || s.id !== "users")
+          .map((s) => (
+            <button
+              key={s.id}
+              className={section === s.id ? "selected" : ""}
+              onClick={() => {
+                setSection(s.id);
+                setError("");
+                setNotice("");
+              }}
+            >
+              <s.icon size={16} />
+              {s.label}
+            </button>
+          ))}
       </div>
       <div className="settings-content">
         {error && (

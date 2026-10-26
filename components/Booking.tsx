@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -55,6 +55,14 @@ export default function Booking({
   const [manageLink, setManageLink] = useState("");
   const [requestKey, setRequestKey] = useState("");
   const [refresh, setRefresh] = useState(0);
+  const contentRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    if (internal)
+      contentRef.current
+        ?.closest(".modal")
+        ?.scrollTo({ top: 0, behavior: "instant" });
+    else window.scrollTo({ top: 0, behavior: "instant" });
+  }, [step, done, internal]);
   useEffect(() => {
     if (!date) return;
     const controller = new AbortController();
@@ -178,7 +186,13 @@ export default function Booking({
           </div>
           <small>Agendamento e cuidado em um só lugar</small>
         </aside>
-        <section className="booking-content">
+        <section className="booking-content" ref={contentRef}>
+          {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
+            <p className="demo-banner">
+              Demonstração compartilhada: use nome e telefone fictícios. O
+              WhatsApp está em modo simulado.
+            </p>
+          )}
           {done ? (
             <div className="success">
               <span className="success-icon">

@@ -10,6 +10,16 @@ export default function AccountPanel({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [busy, setBusy] = useState(false);
+  if (readOnly)
+    return (
+      <section className="panel account-panel">
+        <h2>Minha conta</h2>
+        <p className="muted">
+          As credenciais das contas de demonstração são fixas. Use os botões da
+          tela de entrada para alternar entre gestor e profissional.
+        </p>
+      </section>
+    );
   return (
     <section className="panel account-panel">
       <h2>Minha conta</h2>

@@ -18,7 +18,9 @@ async function handler(request: Request) {
         { status: 404 },
       );
     if (request.method !== "GET") requireOrigin(request);
-    if (path === "change-password" && (await session())?.read_only)
+    const signed = path === "change-password" ? await session() : null;
+    if(path === "change-password" && !signed)return Response.json({error:"Entre para continuar."},{status:401});
+    if (path === "change-password" && (signed?.read_only || signed?.is_demo))
       return Response.json(
         { error: "A conta de demonstração não pode ter a senha alterada." },
         { status: 403 },

@@ -1,5 +1,11 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   Scissors,
   LayoutDashboard,
@@ -38,8 +44,12 @@ import FinancePanel from "./FinancePanel";
 import AppointmentPanel from "./AppointmentPanel";
 import NotificationsPanel from "./NotificationsPanel";
 import InstallAppButton from "./InstallAppButton";
+import WalkInForm from "./WalkInForm";
+import CutsPanel from "./CutsPanel";
+import ProfessionalSettings from "./ProfessionalSettings";
 const tabs: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Visão geral", icon: LayoutDashboard },
+  { id: "cuts", label: "Cortes", icon: Scissors },
   { id: "agenda", label: "Agenda", icon: CalendarDays },
   { id: "team", label: "Profissionais", icon: Users },
   { id: "services", label: "Serviços", icon: Scissors },
@@ -57,6 +67,10 @@ const labels: Record<string, string> = {
   no_show: "Não compareceu",
 };
 const pageCopy: Record<string, [string, string]> = {
+  cuts: [
+    "Seus cortes, no seu ritmo.",
+    "Próximo atendimento, agendamentos e registros avulsos.",
+  ],
   overview: [
     "Tudo pronto para um bom dia.",
     "Acompanhe o movimento e cuide do que faz seu negócio crescer.",
@@ -88,15 +102,21 @@ export default function Dashboard() {
   const [day, setDay] = useState(localDay());
   const [pro, setPro] = useState("all");
   const [query, setQuery] = useState("");
-  const [modal, setModal] = useState<"booking" | "expense" | "payout" | null>(
-    null,
-  );
+  const [modal, setModal] = useState<
+    "booking" | "walk_in" | "expense" | "payout" | null
+  >(null);
   const [detail, setDetail] = useState<Appointment | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [method, setMethod] = useState("Pix");
   const [menu, setMenu] = useState(false);
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [tab]);
+  useLayoutEffect(() => {
+    if (data?.role === "barber") setTab("cuts");
+  }, [data?.role]);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   const menuClose = useRef<HTMLButtonElement>(null);
   const menuPanel = useRef<HTMLElement>(null);
@@ -206,7 +226,7 @@ export default function Dashboard() {
       setBusy(false);
     }
   }
-  async function enterDemo() {
+  async function enterDemo(profile: "owner" | "barber") {
     setBusy(true);
     setError("");
     try {
@@ -214,12 +234,16 @@ export default function Dashboard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: "demo@navalha.local",
+          email:
+            profile === "barber"
+              ? "profissional@navalha.local"
+              : "demo@navalha.local",
           password: "DemoNavalha2026!",
         }),
       });
       if (!r.ok) throw Error("Demonstração indisponível no momento.");
       await load();
+      setTab(profile === "barber" ? "cuts" : "overview");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -311,17 +335,37 @@ export default function Dashboard() {
           )}
           {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
             <>
-              <button
-                className="secondary wide demo-login"
-                disabled={busy}
-                onClick={enterDemo}
-              >
-                Explorar demonstração
-                <ArrowUpRight size={16} />
-              </button>
+              <div className="demo-profiles">
+                <button
+                  type="button"
+                  className="demo-profile"
+                  disabled={busy}
+                  onClick={() => enterDemo("owner")}
+                >
+                  <Users size={21} />
+                  <span>
+                    <strong>Gestor e barbeiro</strong>
+                    <small>Gestão da barbearia e seus próprios cortes</small>
+                  </span>
+                  <ArrowUpRight size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="demo-profile"
+                  disabled={busy}
+                  onClick={() => enterDemo("barber")}
+                >
+                  <Scissors size={21} />
+                  <span>
+                    <strong>Profissional</strong>
+                    <small>Cortes, agenda e financeiro individuais</small>
+                  </span>
+                  <ArrowUpRight size={16} />
+                </button>
+              </div>
               <p className="demo-note">
-                Demonstração com dados fictícios e acesso somente para consulta.
-                Para administrar, use sua conta individual.
+                Contas compartilhadas para testar com dados fictícios. As senhas
+                da demonstração são fixas.
               </p>
             </>
           )}
@@ -412,10 +456,18 @@ export default function Dashboard() {
         <span className="nav-label">ESPAÇO DE TRABALHO</span>
         <nav>
           {tabs
-            .filter(
-              (t) =>
-                (owner || !["messages", "settings"].includes(t.id)) &&
-                (data.role !== "receptionist" || t.id !== "team"),
+            .filter((t) =>
+              data.role === "barber"
+                ? [
+                    "cuts",
+                    "agenda",
+                    "finance",
+                    "messages",
+                    "settings",
+                  ].includes(t.id)
+                : data.role === "receptionist"
+                  ? !["cuts", "team", "messages", "settings"].includes(t.id)
+                  : true,
             )
             .map((t) => (
               <button
@@ -459,7 +511,13 @@ export default function Dashboard() {
             Sair da conta
           </button>
           <div className="account">
-            <span className="avatar small">{owner ? "TL" : "RC"}</span>
+            <span className="avatar small">
+              {data.name
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((part) => part[0])
+                .join("")}
+            </span>
             <div>
               <strong>{data.name}</strong>
               <small>
@@ -517,16 +575,23 @@ export default function Dashboard() {
             >
               <Bell size={20} />
             </button>
-            <span className="avatar small">{owner ? "TL" : "RC"}</span>
+            <span className="avatar small">
+              {data.name
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((part) => part[0])
+                .join("")}
+            </span>
           </div>
         </header>
         <main className="content">
-          {data.readOnly && (
+          {(data.readOnly || data.isDemo) && (
             <div className="demo-banner">
               <strong>Demonstração · dados fictícios</strong>
               <span>
-                Explore a agenda, a divisão dos cortes e os relatórios. Esta
-                conta permite somente consulta.
+                {data.readOnly
+                  ? "Esta conta permite somente consulta."
+                  : "Você pode testar os lançamentos. Use somente dados fictícios; a demonstração é compartilhada."}
               </span>
             </div>
           )}
@@ -536,14 +601,27 @@ export default function Dashboard() {
               <h1>{pageCopy[tab]?.[0]}</h1>
               <p>{pageCopy[tab]?.[1]}</p>
             </div>
-            <button
-              className="primary"
-              disabled={data.readOnly}
-              onClick={() => setModal("booking")}
-            >
-              <Plus size={18} />
-              Novo agendamento
-            </button>
+            {tab !== "cuts" && (
+              <div className="page-actions">
+                <button
+                  className="secondary"
+                  aria-label="Registrar corte avulso"
+                  disabled={data.readOnly}
+                  onClick={() => setModal("walk_in")}
+                >
+                  <Scissors size={17} />
+                  Registrar avulso
+                </button>
+                <button
+                  className="primary"
+                  disabled={data.readOnly}
+                  onClick={() => setModal("booking")}
+                >
+                  <Plus size={18} />
+                  Novo agendamento
+                </button>
+              </div>
+            )}
           </div>
           <div className="toolbar">
             <div className="date-control">
@@ -709,7 +787,12 @@ export default function Dashboard() {
                             <small>Até {time(a.ends_at)}</small>
                           </div>
                         </div>
-                        <span className="service-cell">{a.service_name}</span>
+                        <span className="service-cell">
+                          {a.service_name}
+                          {a.source === "walk_in" && (
+                            <small className="walk-in-badge">Avulso</small>
+                          )}
+                        </span>
                         <span className="professional-cell">
                           <i style={{ background: a.color }} />
                           {a.professional_name.split(" ")[0]}
@@ -927,6 +1010,14 @@ export default function Dashboard() {
               </div>
             </section>
           )}
+          {tab === "cuts" && (
+            <CutsPanel
+              data={data}
+              onSelect={setDetail}
+              onWalkIn={() => setModal("walk_in")}
+              onBooking={() => setModal("booking")}
+            />
+          )}
           {tab === "finance" && (
             <FinancePanel
               readOnly={data.readOnly}
@@ -937,10 +1028,20 @@ export default function Dashboard() {
             />
           )}
           {tab === "settings" && owner && (
-            <SettingsPanel onChanged={load} readOnly={data.readOnly} />
+            <SettingsPanel
+              onChanged={load}
+              readOnly={data.readOnly}
+              demo={data.isDemo}
+            />
+          )}
+          {tab === "settings" && data.role === "barber" && (
+            <ProfessionalSettings data={data} onChanged={load} />
           )}
           {tab === "account" && (
-            <AccountPanel name={data.name} readOnly={data.readOnly} />
+            <AccountPanel
+              name={data.name}
+              readOnly={data.readOnly || data.isDemo}
+            />
           )}
           {tab === "messages" && (
             <NotificationsPanel
@@ -969,7 +1070,12 @@ export default function Dashboard() {
       <nav className="bottom-nav">
         {tabs
           .filter((t) =>
-            ["overview", "agenda", "team", "finance"].includes(t.id),
+            (data.role === "barber"
+              ? ["cuts", "agenda", "finance", "messages", "settings"]
+              : data.role === "receptionist"
+                ? ["overview", "agenda", "finance", "services", "account"]
+                : ["overview", "cuts", "agenda", "team", "finance"]
+            ).includes(t.id),
           )
           .map((t) => (
             <button
@@ -1019,9 +1125,11 @@ export default function Dashboard() {
                 ? "Detalhes do atendimento"
                 : modal === "booking"
                   ? "Novo agendamento"
-                  : modal === "expense"
-                    ? "Nova despesa"
-                    : "Registrar repasse"
+                  : modal === "walk_in"
+                    ? "Registrar corte avulso"
+                    : modal === "expense"
+                      ? "Nova despesa"
+                      : "Registrar repasse"
             }
             onClick={(e) => e.stopPropagation()}
           >
@@ -1040,11 +1148,29 @@ export default function Dashboard() {
               <Booking
                 internal
                 slug={data.tenant.slug}
-                fixedProfessional={data.professionalId || undefined}
+                fixedProfessional={
+                  data.role === "barber"
+                    ? data.professionalId || undefined
+                    : undefined
+                }
                 onDone={() => {
                   setModal(null);
                   void load();
                   setNotice("Agendamento criado");
+                }}
+              />
+            ) : modal === "walk_in" ? (
+              <WalkInForm
+                professionals={data.professionals}
+                professionalId={data.professionalId}
+                role={data.role}
+                onBusyChange={setBusy}
+                onDone={() => {
+                  setModal(null);
+                  if (day === localDay()) void load();
+                  else setDay(localDay());
+                  setTab(data.role === "barber" ? "cuts" : "agenda");
+                  setNotice("Corte avulso registrado.");
                 }}
               />
             ) : detail ? (

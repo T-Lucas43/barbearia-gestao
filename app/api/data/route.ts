@@ -14,6 +14,7 @@ import {
   rateLimit,
 } from "@/lib/http";
 import { createBooking, rescheduleBooking, cancelBooking } from "@/lib/booking";
+import { registerWalkIn } from "@/lib/walk-ins";
 import {
   lockAppointment,
   receipt,
@@ -72,10 +73,10 @@ export async function GET(request: Request) {
               [tenant, pid],
             )
           : Promise.resolve({ rows: [] }),
-        auth.role === "owner"
+        ["owner", "barber"].includes(auth.role)
           ? c.query(
-              "SELECT n.id,n.kind,n.status,n.due_at,n.last_error,a.customer FROM notifications n JOIN appointments a ON a.id=n.appointment_id WHERE a.tenant_id=$1 ORDER BY n.due_at DESC LIMIT 50",
-              [tenant],
+              "SELECT n.id,n.kind,n.status,n.due_at,n.last_error,a.customer,a.professional_id FROM notifications n JOIN appointments a ON a.id=n.appointment_id WHERE a.tenant_id=$1 AND ($2::text IS NULL OR a.professional_id=$2) ORDER BY n.due_at DESC LIMIT 50",
+              [tenant, pid],
             )
           : Promise.resolve({ rows: [] }),
         payroll ? balances(c, tenant, pid) : Promise.resolve([]),
@@ -87,9 +88,12 @@ export async function GET(request: Request) {
       return {
         role: auth.role,
         readOnly: auth.read_only,
-        whatsappEnabled: process.env.WHATSAPP_ENABLED === "true",
+        isDemo: auth.is_demo,
+        whatsappEnabled:
+          process.env.WHATSAPP_ENABLED === "true" &&
+          process.env.DEMO_MODE !== "true",
         name: auth.name,
-        professionalId: pid,
+        professionalId: auth.professional_id,
         professionals: professionals.rows.map((p) =>
           payroll
             ? p
@@ -153,6 +157,7 @@ export async function POST(request: Request) {
         "cash_close",
         "discount",
         "notification_reconcile",
+        "walk_in",
       ].includes(body.action) &&
       !body.idempotencyKey
     )
@@ -216,6 +221,22 @@ export async function POST(request: Request) {
           await c.query("SELECT set_config('app.user_id',$1,true)", [
             auth.user_id,
           ]);
+          if (body.action === "walk_in") {
+            const d = z
+              .object({
+                professionalId: z.string().min(1),
+                serviceId: z.string().min(1),
+                customer: z.string().trim().max(100).default(""),
+                price: amountSchema.optional(),
+                quotedPrice: amountSchema.optional(),
+                received: z.boolean().default(true),
+                method: methodSchema.default("Pix"),
+                tip: amountSchema.default(0),
+                fee: amountSchema.default(0),
+              })
+              .parse(body);
+            return registerWalkIn(c, auth, d);
+          }
           if (body.action === "reschedule") {
             const d = z
               .object({ id: z.uuid(), date: dateSchema, hour: z.string() })

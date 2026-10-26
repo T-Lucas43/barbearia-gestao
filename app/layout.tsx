@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { Viewport } from "next";
 import "./globals.css";
+import PageScrollReset from "@/components/PageScrollReset";
 export const metadata: Metadata = {
   title: "Navalha — Gestão de barbearias",
   description: "Sua agenda organizada. Seu negócio em boas mãos.",
@@ -16,7 +17,10 @@ export const viewport: Viewport = {
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        <PageScrollReset />
+        {children}
+      </body>
     </html>
   );
 }

@@ -25,16 +25,18 @@ export type Session = {
   role: "owner" | "receptionist" | "barber";
   professional_id: string | null;
   read_only: boolean;
+  is_demo: boolean;
 };
 export async function session(): Promise<Session | null> {
   const authenticated = await auth.api.getSession({ headers: await headers() });
   if (!authenticated) return null;
   const member = (
     await db.query(
-      "SELECT user_id,tenant_id,role,professional_id,read_only FROM memberships WHERE user_id=$1 AND active=true",
+      "SELECT user_id,tenant_id,role,professional_id,read_only,is_demo FROM memberships WHERE user_id=$1 AND active=true",
       [authenticated.user.id],
     )
   ).rows[0];
+  if (member?.is_demo && process.env.DEMO_MODE !== "true") return null;
   return member ? { ...member, name: authenticated.user.name } : null;
 }
 export async function requireSession(
