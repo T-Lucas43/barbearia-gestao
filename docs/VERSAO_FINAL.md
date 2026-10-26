@@ -26,7 +26,7 @@ Atualizado em 26/10/2026. A implementação local avançou; a liberação comerc
 | Inicialização | Produção comercial cria operador sem dados fictícios; preflight e cadastro bloqueado quando incompleto | Necessita configurar os serviços externos antes de vender |
 | Publicação | Última release pública verificada: 93f2783 | Nova etapa ainda não publicada |
 
-A suíte completa passou em 29/29 cenários, incluindo confirmação de e-mail e administrador sem vínculo com barbearia. A asserção de remarcação distingue confirmações já simuladas do cancelamento de lembretes pendentes quando o worker está ativo. Typecheck e compilação de produção concluídos; auditoria npm das dependências de produção sem vulnerabilidades conhecidas no momento da execução. Evidências adicionais ficam em VALIDACAO.md.
+A suíte completa passou em 29/29 cenários, incluindo confirmação de e-mail e administrador sem vínculo com barbearia. A asserção de remarcação distingue confirmações já simuladas do cancelamento de lembretes pendentes quando o worker está ativo. Typecheck e compilação de produção concluídos; CI Linux da fonte 5566e0a aprovada ([execução 40419408569](https://github.com/T-Lucas43/barbearia-gestao/actions/runs/40419408569)); auditoria npm das dependências de produção sem vulnerabilidades conhecidas no momento da execução. Evidências adicionais ficam em VALIDACAO.md.
 
 Banco nativo local, aplicação e worker ficaram em execução. Dados do desenvolvimento são fictícios. O backup local de 26/10 passou em restauração numa base temporária; não foi ensaio de recuperação da hospedagem.
 
@@ -37,6 +37,6 @@ Banco nativo local, aplicação e worker ficaram em execução. Dados do desenvo
 3. **Backups externos:** escolher destino, instalar cliente PostgreSQL compatível na hospedagem, guardar chave fora do servidor, configurar retenção externa e testar recuperação a partir da cópia externa.
 4. **Oferta e documentos:** aprovar preços/limites, dados do operador, contato público e textos de termos/privacidade. Os textos atuais são rascunhos.
 5. **Homologação operacional:** uso em Android, iPhone e Smart TV físicos, carga compatível com a quantidade de empresas pretendida e ensaio de incidente.
-6. **Publicação:** gerar pacote Linux da nova fonte, validar CI, implantar e conferir SHA, bundles, login, isolamento e persistência no ambiente publicado.
+6. **Publicação:** gerar pacote Linux da nova fonte, implantar e conferir SHA, bundles, login, isolamento e persistência no ambiente publicado.
 
 Nenhum pagamento, e-mail externo ou mensagem WhatsApp real foi realizado nesta etapa. Notificações internas dependem do sistema aberto. Não declarar a versão comercial liberada com estes itens em aberto.
