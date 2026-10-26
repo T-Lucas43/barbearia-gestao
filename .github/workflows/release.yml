@@ -1,4 +1,4 @@
-name: Validar e empacotar
+name: Validar aplicação
 on:
   push:
     branches: [main]
@@ -52,18 +52,3 @@ jobs:
           npm run typecheck
           npm test
       - run: npm run build
-      - run: npm prune --omit=dev
-      - run: node scripts/package-release.mjs
-      - name: Compactar pacote Linux
-        run: |
-          cd release-package
-          zip -qr ../navalha-shard-${{ github.sha }}.zip .
-          cd ..
-          sha256sum navalha-shard-*.zip > SHA256SUMS.txt
-      - uses: actions/upload-artifact@v7.0.2
-        with:
-          name: navalha-shard-${{ github.sha }}
-          path: |
-            navalha-shard-*.zip
-            SHA256SUMS.txt
-          retention-days: 7

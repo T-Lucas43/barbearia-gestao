@@ -155,7 +155,8 @@ export async function financialPDF(input: PDFReport): Promise<Buffer> {
     return false;
   }
   function section(title: string, subtitle?: string) {
-    ensure(65);
+    // Reserve espaço para o título, cabeçalho e a primeira linha da seção.
+    ensure(165);
     text(title, left, y, {}, 15, ink, true);
     y += 23;
     if (subtitle) {
@@ -188,7 +189,9 @@ export async function financialPDF(input: PDFReport): Promise<Buffer> {
       });
       y += height;
     };
-    ensure(58);
+    doc.font("Helvetica").fontSize(8);
+    const firstHeight = rows[0] ? Math.max(30, ...rows[0].map((cell, i) => doc.heightOfString(cell, {width:sizes[i]-12})+14)) : 0;
+    ensure(30 + firstHeight + 30);
     heading();
     rows.forEach((row, index) => {
       doc.font("Helvetica").fontSize(8);
