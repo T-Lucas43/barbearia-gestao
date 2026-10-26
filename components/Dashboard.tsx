@@ -1062,7 +1062,7 @@ export default function Dashboard() {
               ·{" "}
               {data.whatsappEnabled
                 ? "WhatsApp habilitado"
-                : "WhatsApp simulado"}
+                : "WhatsApp com envio manual"}
             </small>
           </footer>
         </main>

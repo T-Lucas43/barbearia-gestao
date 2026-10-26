@@ -35,6 +35,7 @@ O seed é aditivo e não apaga dados. Não execute `docker compose down -v` para
 - Recebimentos parciais/divididos, descontos, taxas, estornos vinculados ao recebimento original, despesas, repasses e adiantamentos. Caixa físico com abertura e fechamento.
 - Relatórios por período e por barbeiro; exportação CSV e PDF estilizado com totais, divisão, movimentos e paginação.
 - TV com quadro por barbeiro, atendimento atual e próximos; atualização a cada 15 segundos. Pareamento por dispositivo revogável, sem expor telefones ou financeiro.
+- Lembretes manuais na tela: hoje, amanhã e próximos sete dias, mensagem editável e atalho para o WhatsApp do cliente. Respeita autorização de contato e acesso por profissional; não envia automaticamente nem confirma entrega. Funciona sem integração.
 - Fila persistente de WhatsApp com consentimento, leases, retentativas e conciliação de resultado incerto. Adaptador oficial e webhook assinados implementados; envio real depende das credenciais e modelos aprovados da Meta.
 - Instalação PWA, ícones próprios e tela de indisponibilidade offline. Agenda, financeiro, sessões e links pessoais não ficam no cache offline.
 - Demonstração com histórico fictício, dias futuros, pagamentos e despesas. Duas contas interativas com dados fictícios e credenciais protegidas.

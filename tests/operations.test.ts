@@ -690,6 +690,117 @@ test("corte avulso mantém histórico, divisão, recebimento idempotente e limit
   );
 });
 
+test("lembretes manuais usam agenda atual e isolam telefone por profissional", async () => {
+  const p = (
+    await ok("/api/settings", {
+      action: "professional",
+      name: "Lembretes QA",
+      specialty: "Cortes",
+      color: "#aabbcc",
+      commissionBps: 6000,
+      commissionKind: "percent",
+      commissionFixed: 0,
+      active: true,
+    })
+  ).id;
+  const mail = "lembrete-" + email;
+  await ok("/api/settings", {
+    action: "user_create",
+    name: "Lembretes QA",
+    email: mail,
+    password,
+    role: "barber",
+    professionalId: p,
+  });
+  const barber = await login(mail);
+  const ids: string[] = [];
+  for (const [pid, offset, consent, status] of [
+    [p, 24, true, "scheduled"],
+    [pro, 24, true, "confirmed"],
+    [p, 26, false, "scheduled"],
+    [p, 28, true, "cancelled"],
+  ] as const) {
+    const a = (
+      await db.query(
+        "INSERT INTO appointments(tenant_id,professional_id,service_id,customer,phone,starts_at,ends_at,price,list_price,commission_bps,commission,manage_hash,consent,status) VALUES($1,$2,$3,'Lembrete fictício QA','11900000001',now()+($4*interval '1 hour'),now()+(($4+0.5)*interval '1 hour'),5000,5000,6000,3000,$5,$6,$7) RETURNING id",
+        [tenant, pid, service, offset, randomUUID(), consent, status],
+      )
+    ).rows[0];
+    ids.push(a.id);
+  }
+  assert.equal((await fetch(base + "/api/reminders")).status, 401);
+  assert.equal(
+    (
+      await fetch(base + "/api/reminders?professionalId=" + pro, {
+        headers: { Cookie: barber },
+      })
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await fetch(base + "/api/reminders?period=invalid", {
+        headers: { Cookie: barber },
+      })
+    ).status,
+    400,
+  );
+  const response = await fetch(base + "/api/reminders", {
+    headers: { Cookie: barber },
+  });
+  assert.equal(response.status, 200);
+  assert.match(
+    response.headers.get("cache-control") || "",
+    /private, no-store/,
+  );
+  const own = await response.json();
+  assert.deepEqual(
+    own.appointments.map((a: { id: string }) => a.id),
+    [ids[0], ids[2]],
+  );
+  assert.equal(own.appointments[0].phone, "11900000001");
+  assert.equal(own.appointments[1].consent, false);
+  assert.ok(
+    own.appointments.every(
+      (a: {
+        professional_id: string;
+        manage_hash?: string;
+        commission?: number;
+      }) =>
+        a.professional_id === p &&
+        a.manage_hash === undefined &&
+        a.commission === undefined,
+    ),
+  );
+  const all = await get("/api/reminders");
+  assert.ok(all.appointments.some((a: { id: string }) => a.id === ids[1]));
+  assert.ok(!all.appointments.some((a: { id: string }) => a.id === ids[3]));
+  const other = (
+    await db.query(
+      "SELECT id FROM professionals WHERE tenant_id='demo' LIMIT 1",
+    )
+  ).rows[0];
+  assert.deepEqual(
+    (await get("/api/reminders?professionalId=" + other.id)).appointments,
+    [],
+  );
+  await db.query(
+    "UPDATE appointments SET starts_at=starts_at+interval '30 days',ends_at=ends_at+interval '30 days',schedule_version=schedule_version+1 WHERE id=$1",
+    [ids[0]],
+  );
+  const changed = await get("/api/reminders", barber);
+  assert.ok(!changed.appointments.some((a: { id: string }) => a.id === ids[0]));
+  assert.equal(
+    (
+      await db.query(
+        "SELECT id FROM notifications WHERE appointment_id=ANY($1::uuid[])",
+        [ids],
+      )
+    ).rowCount,
+    0,
+  );
+});
+
 test("perfis individuais, isolamento entre barbearias e TV revogável", async () => {
   const accounts = [
     {

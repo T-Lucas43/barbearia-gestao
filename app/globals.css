@@ -4161,3 +4161,131 @@ small {
     font-size: 9px;
   }
 }
+
+.manual-reminders {
+  margin-bottom: 22px;
+}
+.manual-reminders .panel-heading {
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.manual-reminders .panel-heading p {
+  max-width: 620px;
+  line-height: 1.7;
+}
+.manual-reminder-note {
+  margin: 12px 0 18px;
+}
+.manual-reminder-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 14px;
+  margin: 20px 0;
+}
+.manual-reminder-filters .field {
+  flex: 1;
+  min-width: 170px;
+}
+.manual-reminder-filters button {
+  min-height: 44px;
+}
+.manual-reminder-list {
+  display: grid;
+  gap: 14px;
+}
+.manual-reminder-card {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-width: 0;
+}
+.manual-reminder-heading {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  align-items: start;
+}
+.manual-reminder-heading > div {
+  min-width: 0;
+}
+.manual-reminder-heading strong {
+  display: block;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.manual-reminder-heading div > span {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.manual-reminder-date {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 14px 0;
+  font-weight: 600;
+}
+.manual-reminder-date span {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.reminder-due {
+  background: #f8eedc;
+  color: #77531b;
+}
+.manual-reminder-card summary,
+.automatic-notifications > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 12px 0;
+  font-weight: 600;
+}
+.manual-reminder-card textarea {
+  width: 100%;
+  min-height: 160px;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid #dfe4dc;
+  border-radius: 8px;
+  font: inherit;
+  line-height: 1.6;
+  background: var(--surface);
+  color: var(--ink);
+}
+.manual-reminder-card textarea:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 3px;
+}
+.manual-reminder-actions {
+  margin-top: 12px;
+}
+.manual-reminder-actions a {
+  display: inline-flex;
+  min-height: 44px;
+}
+.automatic-notifications {
+  margin-top: 16px;
+}
+@media (max-width: 760px) {
+  .manual-reminder-heading {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .manual-reminder-card {
+    padding: 15px;
+  }
+  .manual-reminder-filters {
+    gap: 10px;
+  }
+  .manual-reminder-filters .field {
+    min-width: 100%;
+  }
+  .manual-reminder-filters button,
+  .manual-reminder-actions a {
+    width: 100%;
+    justify-content: center;
+  }
+}

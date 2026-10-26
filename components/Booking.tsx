@@ -189,8 +189,9 @@ export default function Booking({
         <section className="booking-content" ref={contentRef}>
           {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
             <p className="demo-banner">
-              Demonstração compartilhada: use nome e telefone fictícios. O
-              WhatsApp está em modo simulado.
+              Demonstração compartilhada: use dados fictícios. O envio
+              automático está desligado; confira o destinatário antes de usar os
+              atalhos de WhatsApp.
             </p>
           )}
           {done ? (

@@ -33,3 +33,9 @@ Duas contas de demonstração interativas: gestor vinculado ao Rafael e profissi
 Registro avulso concluído, recebimento imediato ou pendente, divisão contratada, idempotência, sem reserva de horário ou WhatsApp. Navegação retorna ao topo. Build e typecheck locais concluídos. Publicação da atualização em andamento.
 
 Publicação da atualização concluída em https://navalha-gestao.shardweb.app/. Release 20623ab confirmada por health e checagem dos dois perfis. Suíte final 19/19 e CI concluída.
+
+## Lembretes manuais — 26/10/2026
+
+Envio manual sem API: lista da agenda futura por período, acesso individual por profissional, mensagem editável com cliente/serviço/barbeiro/data/hora e link wa.me com número brasileiro normalizado. Sem disparo automático ou confirmação de envio/entrega. Sem autorização de contato, atalho indisponível. Cortes avulsos e atendimentos cancelados/concluídos não aparecem. Histórico da integração automática preservado em área recolhida; integração real continua opcional e desligada na demonstração.
+
+22 testes locais passaram, incluindo isolamento, reagendamento, ausência de dependência da fila e formato seguro do link. Não foi aberta conversa nem enviada mensagem externa na validação.
