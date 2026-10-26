@@ -22,7 +22,7 @@ for (const signal of ["SIGINT", "SIGTERM"] as const)
     process.exit(0);
   });
 console.log(
-  process.env.WHATSAPP_ENABLED === "true"
+  process.env.WHATSAPP_ENABLED === "true" && process.env.DEMO_MODE !== "true"
     ? "Worker de WhatsApp real iniciado."
     : "Worker iniciado em modo simulado. Nenhuma mensagem real será enviada.",
 );

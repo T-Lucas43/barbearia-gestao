@@ -3627,6 +3627,7 @@ small {
   top: 9px;
   right: 9px;
 }
+.topbar-right .install-dialog .dialog-close { display: inline-flex; }
 .install-dialog h2 {
   font-size: 27px;
   line-height: 1.25;

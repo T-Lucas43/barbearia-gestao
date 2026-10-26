@@ -1018,8 +1018,8 @@ export default function SettingsPanel({
                   Copiar link
                 </button>
                 <p>
-                  Em outro aparelho, use o endereço da rede local no lugar de
-                  127.0.0.1. O modo LAN é iniciado com npm run dev:lan.
+                  Abra o link no navegador da TV para parear este aparelho. Use
+                  a opção de tela cheia para deixar o painel em exibição.
                 </p>
               </div>
             )}

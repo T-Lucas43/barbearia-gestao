@@ -278,7 +278,7 @@ export default function Dashboard() {
           <InstallAppButton />
           <span className="eyebrow">BEM-VINDO À NAVALHA</span>
           <h2>Seu dia começa aqui.</h2>
-          <p className="muted">Entre no ambiente de demonstração local.</p>
+          <p className="muted">Entre com sua conta da barbearia.</p>
           <form onSubmit={enter}>
             <label className="field">
               Email
@@ -506,7 +506,9 @@ export default function Dashboard() {
             )}
             <span className="local-badge">
               <span />
-              Modo local
+              {process.env.NEXT_PUBLIC_DEMO_MODE === "true"
+                ? "Demonstração"
+                : "Seu espaço"}
             </span>
             <button
               className="icon-button"
@@ -737,7 +739,7 @@ export default function Dashboard() {
                 <div className="panel-footer">
                   <span>
                     <span className="online-dot" />
-                    Agenda sincronizada com o banco local
+                    Horários e atendimentos do dia
                   </span>
                   <small>{appointments.length} atendimentos</small>
                 </div>
@@ -953,7 +955,10 @@ export default function Dashboard() {
               <small>Menos gestão. Mais cuidado.</small>
             </span>
             <small>
-              Versão local ·{" "}
+              {process.env.NEXT_PUBLIC_DEMO_MODE === "true"
+                ? "Demonstração"
+                : "Navalha"}{" "}
+              ·{" "}
               {data.whatsappEnabled
                 ? "WhatsApp habilitado"
                 : "WhatsApp simulado"}
