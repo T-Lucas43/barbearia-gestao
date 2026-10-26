@@ -13,3 +13,4 @@ playwright-report/
 backups/
 output/
 tmp/
+local-data/

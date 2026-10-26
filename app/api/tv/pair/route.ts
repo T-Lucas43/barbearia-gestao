@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/http";
 import { cookies } from "next/headers";
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -9,7 +10,7 @@ export async function POST(request: Request) {
     requireOrigin(request);
     const { token } = z
       .object({ token: z.string().regex(/^[0-9a-f]{64}$/) })
-      .parse(await request.json());
+      .parse(await readJson(request));
     const hash = createHash("sha256").update(token).digest("hex");
     await rateLimit("tv-pair:" + hash, 20, 900);
     const device = (

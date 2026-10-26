@@ -1,0 +1,326 @@
+.access-page,
+.platform-page {
+  min-height: 100svh;
+  background: var(--bg);
+}
+.access-card,
+.onboarding-card,
+.legal-card {
+  width: min(880px, calc(100% - 32px));
+  margin: 44px auto;
+  padding: 30px;
+}
+.access-card {
+  max-width: 520px;
+}
+.access-card h1,
+.onboarding-card h1,
+.legal-card h1,
+.platform-content > h1 {
+  font-size: clamp(26px, 4vw, 38px);
+  margin: 10px 0 14px;
+  line-height: 1.15;
+}
+.access-card form,
+.onboarding-card form,
+.account-security form,
+.platform-content form {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+.access-card > .inline-link,
+.onboarding-card > .inline-link {
+  margin-top: 22px;
+  display: inline-flex;
+}
+.legal-card h2 {
+  font-size: 20px;
+  margin: 28px 0 9px;
+}
+.legal-card p {
+  line-height: 1.85;
+  color: var(--muted);
+}
+.legal-card a,
+.check-field a {
+  color: var(--focus);
+  text-decoration: underline;
+}
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.plan-choice,
+.plan-editor {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  text-align: left;
+  color: var(--ink);
+}
+.plan-choice.selected {
+  border-color: #b48b3e;
+  box-shadow: 0 0 0 2px #d5ae5933;
+}
+.plan-choice > strong,
+.plan-choice > b,
+.plan-choice > span {
+  display: block;
+}
+.plan-choice > b {
+  font-size: 26px;
+  margin: 12px 0;
+}
+.plan-choice small {
+  font-size: 12px;
+  font-weight: 400;
+}
+.plan-choice p {
+  font-size: 12px;
+  margin: 10px 0;
+  color: var(--muted);
+}
+.plan-choice .primary {
+  margin-top: 14px;
+}
+.honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.billing-panel,
+.platform-content > .panel {
+  padding: 26px;
+}
+.billing-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 22px;
+  margin: 24px 0;
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+.billing-overview strong {
+  color: var(--ink);
+}
+.billing-overview span {
+  color: var(--muted);
+}
+.billing-history {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 25px;
+}
+.billing-history summary {
+  cursor: pointer;
+  min-height: 44px;
+  font-weight: 600;
+}
+.billing-history p {
+  margin: 10px 0;
+  color: var(--muted);
+}
+.platform-content {
+  width: min(1200px, calc(100% - 36px));
+  margin: 35px auto;
+  display: grid;
+  gap: 25px;
+}
+.platform-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+.platform-content h2,
+.billing-panel h2 {
+  font-size: 24px;
+}
+.platform-businesses {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+.business-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  text-align: left;
+  min-height: 75px;
+}
+.business-row.selected {
+  border-color: #b48b3e;
+  background: var(--surface-soft);
+}
+.business-row strong,
+.business-row small {
+  display: block;
+}
+.business-row small,
+.audit-row {
+  font-size: 11px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.audit-row {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.account-security {
+  margin-top: 35px;
+  border-top: 1px solid var(--line);
+  padding-top: 26px;
+}
+.account-security h3 {
+  font-size: 22px;
+  margin-bottom: 12px;
+}
+.account-security > .pill {
+  margin-top: 14px;
+}
+.two-factor-enrollment,
+.backup-codes {
+  padding: 20px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-top: 20px;
+}
+.backup-codes textarea {
+  display: block;
+  width: 100%;
+  min-height: 160px;
+  margin: 16px 0;
+  font-family: monospace;
+}
+.backup-codes button {
+  margin: 8px 10px 0 0;
+}
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.session-row span {
+  min-width: 0;
+  flex: 1;
+}
+.session-row strong,
+.session-row small {
+  display: block;
+}
+.session-row small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.login-links {
+  display: flex;
+  gap: 12px 20px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+  font-size: 12px;
+}
+.login-links a {
+  color: var(--focus);
+}
+.subscription-banner {
+  background: var(--surface-soft);
+  border: 1px solid #b48b3e;
+  padding: 16px;
+  border-radius: 12px;
+  margin: 0 0 20px;
+}
+@media (max-width: 760px) {
+  .access-card,
+  .onboarding-card,
+  .legal-card {
+    margin: 20px auto;
+    padding: 22px;
+  }
+  .plan-grid,
+  .platform-plan-grid {
+    grid-template-columns: 1fr;
+  }
+  .platform-content {
+    width: calc(100% - 24px);
+    margin-top: 22px;
+    gap: 16px;
+  }
+  .billing-panel,
+  .platform-content > .panel {
+    padding: 20px;
+  }
+  .booking-header .secondary {
+    font-size: 11px;
+    padding: 10px;
+  }
+  .business-row {
+    display: grid;
+    gap: 7px;
+  }
+  .session-row {
+    align-items: start;
+  }
+  .session-row button {
+    font-size: 11px;
+    min-width: 90px;
+  }
+  .account-security .two-factor-enrollment {
+    padding: 14px;
+  }
+}
+
+.account-page-content {
+  width: min(680px, calc(100% - 28px));
+  margin: 30px auto;
+}
+.account-page-content > .panel {
+  padding: 26px;
+}
+.account-page-content > .inline-link {
+  display: inline-flex;
+  margin-top: 20px;
+}
+.privacy-panel form {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+}
+.privacy-panel hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 28px 0;
+}
+
+.readiness-list {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0;
+}
+.readiness-list p {
+  padding: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 12px;
+}
+.readiness-list span {
+  margin-right: 8px;
+  color: var(--focus);
+}

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import SecurityPanel from "./SecurityPanel";
 export default function AccountPanel({
   name,
   readOnly = false,
@@ -98,6 +99,7 @@ export default function AccountPanel({
           {busy ? "Salvando…" : "Alterar minha senha"}
         </button>
       </form>
+      <SecurityPanel />
       {error && (
         <p className="error" role="alert">
           {error}

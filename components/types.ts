@@ -38,6 +38,13 @@ export type Appointment = {
   schedule_version?: number;
 };
 export type Data = {
+  platformAdmin?: boolean;
+  subscription?: {
+    state: string;
+    billing_enforced: boolean;
+    plan_name: string;
+    period_end: string | null;
+  };
   role: string;
   readOnly?: boolean;
   isDemo?: boolean;

@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/http";
 import { auth } from "@/lib/auth-engine";
 import { requireOrigin } from "@/lib/auth";
 import { errorResponse, rateLimit } from "@/lib/http";
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
         email: z.email().transform((v) => v.toLowerCase().trim()),
         password: z.string().min(1).max(128),
       })
-      .parse(await request.json());
+      .parse(await readJson(request));
     await rateLimit("login:" + body.email, 15, 900);
     return await auth.api.signInEmail({
       body,

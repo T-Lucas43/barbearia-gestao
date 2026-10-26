@@ -1,0 +1,388 @@
+:root {
+  color-scheme: light;
+  --surface-soft: #f4f6f9;
+  --surface-raised: #fff;
+  --focus: #9b7128;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #101317;
+  --surface: #191e25;
+  --surface-soft: #222933;
+  --surface-raised: #252d37;
+  --ink: #edf1f7;
+  --muted: #a9b4c3;
+  --line: #333d49;
+  --green: #edf1f7;
+  --focus: #f0d389;
+}
+.brand-adaptive {
+  display: inline-flex;
+  max-width: 100%;
+}
+.brand-on-dark {
+  display: none;
+}
+html[data-theme="dark"] .brand-on-light {
+  display: none;
+}
+html[data-theme="dark"] .brand-on-dark {
+  display: block;
+}
+.public-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.theme-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  position: relative;
+  color: var(--ink);
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-height: 42px;
+  padding: 0 9px;
+  flex-shrink: 0;
+}
+.theme-control select {
+  width: 108px;
+  min-height: 40px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.theme-control svg {
+  flex-shrink: 0;
+}
+.theme-control:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.theme-control select:focus-visible {
+  outline: 0;
+}
+.login-box > .theme-control {
+  margin-bottom: 18px;
+}
+.breadcrumb > .brand-adaptive {
+  display: none;
+}
+html[data-theme="dark"] body {
+  background: var(--bg);
+  color: var(--ink);
+}
+html[data-theme="dark"] :is(input, select, textarea) {
+  color: var(--ink);
+  background: var(--surface-soft);
+  border-color: var(--line);
+}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #8f9bad;
+}
+html[data-theme="dark"]
+  :is(
+    .topbar,
+    .panel,
+    .modal,
+    .stat-card,
+    .booking,
+    .booking-layout,
+    .login-page,
+    .login-box,
+    .install-dialog,
+    .barber-summary > div,
+    .cut-focus-card,
+    .notification-center,
+    .settings-records > button,
+    .calendar-appointment,
+    .month-day
+  ) {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+html[data-theme="dark"]
+  :is(
+    .pill,
+    .date-control,
+    .soft-count,
+    .table-head,
+    .formula,
+    .view-switch,
+    .ledger-icon,
+    .choice,
+    .steps b,
+    .booking-summary,
+    .integration-note,
+    .cash-balance,
+    .ledger-button,
+    .detail-payment,
+    .split-preview,
+    .install-app-button,
+    .walk-in-paid,
+    .demo-profile,
+    .whatsapp-desk-note,
+    .notice-list-item,
+    .whatsapp-workflow p,
+    .manual-reminder-card,
+    .timeline-label,
+    .timeline-name,
+    .week-heading,
+    .month-weekdays,
+    .calendar-toolbar,
+    .calendar-empty,
+    .month-day.outside,
+    .reminder-due
+  ) {
+  background: var(--surface-soft);
+  border-color: var(--line);
+  color: var(--muted);
+}
+html[data-theme="dark"]
+  :is(
+    .panel-heading h2,
+    .cut-focus-card h2,
+    .whatsapp-workflow strong,
+    .app-footer strong,
+    .booking-summary strong,
+    .split-preview strong,
+    .settings-records strong,
+    .calendar-appointment strong,
+    .manual-reminder-card strong
+  ) {
+  color: var(--ink);
+}
+html[data-theme="dark"]
+  :is(
+    .eyebrow,
+    .barber-summary small,
+    .cut-focus-card p,
+    .cut-focus-card .cut-time,
+    .barber-status-note,
+    .barber-day-heading,
+    .whatsapp-desk-note p,
+    .manual-send-confirmation .check-field,
+    .notice-list-item small,
+    .app-footer,
+    .form-note,
+    .muted,
+    .cut-list-time small,
+    .calendar-appointment small,
+    .table-head,
+    .appointment-row small,
+    .timeline-time,
+    .month-weekdays,
+    .settings-records small
+  ) {
+  color: var(--muted);
+}
+html[data-theme="dark"] :is(.secondary, .light-button) {
+  background: var(--surface-raised);
+  border-color: var(--line);
+  color: var(--ink);
+}
+html[data-theme="dark"]
+  :is(
+    .secondary:hover,
+    .light-button:hover,
+    .appointment-row:hover,
+    .calendar-appointment:hover,
+    .ledger-button:hover,
+    .notice-list-item:hover,
+    .demo-profile:hover
+  ) {
+  background: #303a47;
+  border-color: #737e90;
+}
+html[data-theme="dark"]
+  :is(.text-button, .inline-link, .reminder-requested-note) {
+  color: #e7c778;
+}
+html[data-theme="dark"]
+  :is(
+    .status.confirmed,
+    .cut-countdown,
+    .walk-in-badge,
+    .demo-banner,
+    .demo-note
+  ) {
+  color: #f0d389;
+  background: #3b3020;
+  border-color: #756039;
+}
+html[data-theme="dark"] .status.scheduled {
+  color: #c3cbd8;
+  background: #303846;
+}
+html[data-theme="dark"] :is(.status.completed, .success-note) {
+  color: #a1e9bd;
+  background: #183c2b;
+  border-color: #2d6548;
+}
+html[data-theme="dark"] .status.in_progress {
+  color: #abd6ff;
+  background: #1d3853;
+}
+html[data-theme="dark"] :is(.status.cancelled, .status.no_show, .error) {
+  color: #ffc0b7;
+  background: #4a2627;
+  border-color: #7f4143;
+}
+html[data-theme="dark"] :is(.avatar, .choice-icon) {
+  background: #48391f;
+  color: #f0d389;
+}
+html[data-theme="dark"]
+  :is(
+    .view-switch button.selected,
+    .chips button.selected,
+    .settings-navigation button.selected,
+    .reminder-view-tabs button.active
+  ) {
+  background: #d5ae59;
+  color: #14191f;
+  border-color: #d5ae59;
+}
+html[data-theme="dark"]
+  :is(
+    .month-day.today b,
+    .month-day.selected,
+    .is-today .week-heading,
+    .choice.selected,
+    .settings-records > button.selected
+  ) {
+  background: #3c2e29;
+  border-color: #d5ae59;
+  color: #f4dfab;
+}
+html[data-theme="dark"]
+  :is(
+    .appointment-row,
+    .cut-list-row,
+    .panel-heading,
+    .table-head,
+    .reminder-view-tabs,
+    .manual-send-confirmation,
+    .reminder-unavailable,
+    .notice-toggle,
+    .month-day,
+    .week-column,
+    .timeline-track,
+    .timeline-name,
+    .calendar-footer,
+    .detail-section,
+    .settings-section,
+    .finance-row
+  ) {
+  border-color: var(--line);
+}
+html[data-theme="dark"] .bottom-nav {
+  background: #191e25f5;
+  border-color: var(--line);
+}
+html[data-theme="dark"] .bottom-nav button {
+  color: #b4bfce;
+}
+html[data-theme="dark"] .bottom-nav button.active {
+  color: #f0d389;
+  background: #3b3020;
+}
+html[data-theme="dark"] .notification-dot {
+  border-color: var(--surface);
+}
+html[data-theme="dark"] .cut-focus-card.current {
+  background:
+    radial-gradient(ellipse at 100% 0, #d5ae5921, transparent 65%), #242c37;
+  color: #fff;
+}
+html[data-theme="dark"] .cut-focus-card.current h2 {
+  color: #fff;
+}
+html[data-theme="dark"] .timeline-track {
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 59px,
+    #ffffff09 59px,
+    #ffffff09 60px
+  );
+}
+html[data-theme="dark"] :is(button, a, input, select, textarea):focus-visible {
+  outline-color: var(--focus);
+}
+html[data-theme="dark"] .theme-control select {
+  background: transparent;
+}
+@media (max-width: 760px) {
+  .theme-control {
+    width: 40px;
+    min-height: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .theme-control select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+  }
+  .login-box > .theme-control {
+    width: auto;
+    padding: 0 9px;
+    gap: 7px;
+  }
+  .login-box > .theme-control select {
+    position: static;
+    width: 108px;
+    opacity: 1;
+  }
+  .breadcrumb > .brand-adaptive {
+    display: inline-flex;
+    width: 96px;
+  }
+  .breadcrumb .brand-adaptive .elares-brand {
+    width: 96px;
+  }
+  .topbar-right {
+    gap: 5px;
+  }
+  .public-header-actions {
+    gap: 6px;
+  }
+}
+
+/* Dourado com presença, sem reduzir o contraste dos controles. */
+.primary {
+  background: linear-gradient(115deg, #c89a40 0%, #e7c778 52%, #d5ae59 100%);
+  color: #201a10;
+  border: 1px solid #bb8c33;
+  box-shadow:
+    inset 0 1px 0 #fff5d0a6,
+    0 4px 14px #b88a3224;
+}
+.primary:hover {
+  background: linear-gradient(115deg, #d4a54a, #f0d48e, #dfb96a);
+}
+.sidebar nav button.active {
+  background: linear-gradient(110deg, #cda247, #e3bd6b);
+  color: #201a10;
+  border: 1px solid #e7c77877;
+}
+.sidebar nav button.active svg {
+  color: #201a10;
+}
+html[data-theme="dark"] .bottom-nav button.active {
+  color: #f0d389;
+  background: #48391f;
+}
+html[data-theme="dark"] .cut-focus-card.next {
+  border-top-color: #d5ae59;
+}

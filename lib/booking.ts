@@ -6,6 +6,7 @@ import { commission } from "./domain";
 import { encryptToken } from "./secure-token";
 import { queueNotifications } from "./notifications";
 import { audit, lockAppointment } from "./finance";
+import { assertSubscription } from "./subscription";
 const tokenHash = (token: string) =>
   createHash("sha256").update(token).digest("hex");
 export async function createBooking(
@@ -23,6 +24,7 @@ export async function createBooking(
     quotedDuration?: number;
   },
 ) {
+  await assertSubscription(tenant, c, true);
   const candidates =
     b.professionalId === "any"
       ? (
@@ -112,6 +114,7 @@ export async function rescheduleBooking(
   hour: string,
   publicAction = false,
 ) {
+  await assertSubscription(tenant, c, publicAction);
   const a = await lockAppointment(c, tenant, id);
   if (!["scheduled", "confirmed"].includes(a.status))
     throw new HttpError(

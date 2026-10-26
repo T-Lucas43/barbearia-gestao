@@ -49,6 +49,8 @@ import CutsPanel from "./CutsPanel";
 import ProfessionalSettings from "./ProfessionalSettings";
 import Brand from "./Brand";
 import InAppNotifications from "./InAppNotifications";
+import { ThemeControl } from "./ThemeProvider";
+import SubscriptionPanel from "./SubscriptionPanel";
 const tabs: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Visão geral", icon: LayoutDashboard },
   { id: "cuts", label: "Cortes", icon: Scissors },
@@ -58,6 +60,7 @@ const tabs: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "finance", label: "Financeiro", icon: Wallet },
   { id: "messages", label: "Lembretes", icon: MessageCircle },
   { id: "settings", label: "Configurações", icon: Settings },
+  { id: "subscription", label: "Plano e assinatura", icon: Receipt },
   { id: "account", label: "Minha conta", icon: Users },
 ];
 const labels: Record<string, string> = {
@@ -95,11 +98,17 @@ const pageCopy: Record<string, [string, string]> = {
     "Do seu jeito.",
     "Personalize a barbearia, a equipe e as regras do atendimento.",
   ],
+  subscription: [
+    "Seu espaço para crescer.",
+    "Plano, validade e solicitações de assinatura.",
+  ],
   account: ["Seu acesso, protegido.", "Gerencie sua senha individual."],
 };
 export default function Dashboard() {
   const [data, setData] = useState<Data>();
   const [login, setLogin] = useState(false);
+  const [secondFactor, setSecondFactor] = useState(false);
+  const [backupLogin, setBackupLogin] = useState(false);
   const [tab, setTab] = useState("overview");
   const [day, setDay] = useState(localDay());
   const [pro, setPro] = useState("all");
@@ -211,17 +220,35 @@ export default function Dashboard() {
     setBusy(true);
     const f = new FormData(e.currentTarget);
     try {
-      const r = await fetch("/api/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          password: f.get("password"),
-          email: f.get("email"),
-        }),
-      });
-      if (!r.ok) throw Error("Senha incorreta");
+      const r = await fetch(
+        secondFactor
+          ? "/api/auth/two-factor/" +
+              (backupLogin ? "verify-backup-code" : "verify-totp")
+          : "/api/session",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            secondFactor
+              ? { code: String(f.get("code")).trim(), trustDevice: false }
+              : { password: f.get("password"), email: f.get("email") },
+          ),
+        },
+      );
+      const response = await r.json();
+      if (!r.ok)
+        throw Error(
+          response.message || response.error || "Não foi possível entrar.",
+        );
       setError("");
-      await load();
+      if (response.twoFactorRedirect) {
+        setSecondFactor(true);
+        return;
+      }
+      setSecondFactor(false);
+      if (new URLSearchParams(location.search).get("next") === "administracao")
+        location.assign("/administracao");
+      else await load();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -279,13 +306,10 @@ export default function Dashboard() {
           </div>
           <span className="eyebrow light">MAIS TEMPO PARA O QUE IMPORTA</span>
           <h1>
-            Seu talento
-            <br />
-            faz o corte.
-            <br />
+            Seu talento <br />
+            faz o corte. <br />
             <em>
-              A gente cuida
-              <br />
+              A gente cuida <br />
               da gestão.
             </em>
           </h1>
@@ -299,35 +323,75 @@ export default function Dashboard() {
           </span>
         </div>
         <section className="login-box">
+          <ThemeControl />
           <InstallAppButton />
           <span className="eyebrow">BEM-VINDO AO ELARES BARBER</span>
           <h2>Seu dia começa aqui.</h2>
           <p className="muted">Entre com sua conta da barbearia.</p>
           <form onSubmit={enter}>
-            <label className="field">
-              Email
-              <input
-                name="email"
-                type="email"
-                autoComplete="username"
-                required
-                placeholder="voce@barbearia.com"
-              />
-            </label>
-            <label className="field">
-              Senha
-              <input
-                name="password"
-                type="password"
-                required
-                autoComplete="current-password"
-              />
-            </label>
+            {!secondFactor && (
+              <>
+                <label className="field">
+                  Email
+                  <input
+                    name="email"
+                    type="email"
+                    autoComplete="username"
+                    required
+                    placeholder="voce@barbearia.com"
+                  />
+                </label>
+                <label className="field">
+                  Senha
+                  <input
+                    name="password"
+                    type="password"
+                    required
+                    autoComplete="current-password"
+                  />
+                </label>
+              </>
+            )}
+            {secondFactor && (
+              <>
+                <label className="field">
+                  {backupLogin
+                    ? "Código de recuperação"
+                    : "Código do autenticador"}
+                  <input
+                    name="code"
+                    autoComplete="one-time-code"
+                    inputMode={backupLogin ? "text" : "numeric"}
+                    minLength={6}
+                    maxLength={100}
+                    required
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() => setBackupLogin(!backupLogin)}
+                >
+                  {backupLogin
+                    ? "Usar autenticador"
+                    : "Usar código de recuperação"}
+                </button>
+              </>
+            )}
             <button className="primary wide" disabled={busy}>
-              {busy ? "Entrando…" : "Entrar no painel"}
+              {busy
+                ? "Entrando…"
+                : secondFactor
+                  ? "Confirmar código"
+                  : "Entrar no painel"}
               <ArrowRight size={18} />
             </button>
           </form>
+          <nav className="login-links" aria-label="Acesso e cadastro">
+            <a href="/recuperar-senha">Esqueci minha senha</a>
+            <a href="/comecar">Criar minha barbearia</a>
+            <a href="/privacidade">Privacidade</a>
+          </nav>
           {error && (
             <p className="error" role="alert">
               {error}
@@ -550,6 +614,7 @@ export default function Dashboard() {
             <strong>{tabs.find((t) => t.id === tab)?.label}</strong>
           </div>
           <div className="topbar-right">
+            <ThemeControl />
             <InstallAppButton />
             {owner && (
               <a
@@ -1042,6 +1107,7 @@ export default function Dashboard() {
           {tab === "settings" && data.role === "barber" && (
             <ProfessionalSettings data={data} onChanged={load} />
           )}
+          {tab === "subscription" && owner && <SubscriptionPanel />}
           {tab === "account" && (
             <AccountPanel
               name={data.name}
@@ -1054,6 +1120,11 @@ export default function Dashboard() {
               onChanged={load}
               readOnly={data.readOnly}
             />
+          )}
+          {data.platformAdmin && (
+            <a className="inline-link" href="/administracao">
+              Administração da plataforma
+            </a>
           )}
           <footer className="app-footer">
             <span>

@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/http";
 import { session, requireOrigin } from "@/lib/auth";
 import { db, transaction } from "@/lib/db";
 import { localDay, commission } from "@/lib/domain";
@@ -15,6 +16,7 @@ import {
 } from "@/lib/http";
 import { createBooking, rescheduleBooking, cancelBooking } from "@/lib/booking";
 import { registerWalkIn } from "@/lib/walk-ins";
+import { assertSubscription, subscriptionFor } from "@/lib/subscription";
 import {
   lockAppointment,
   receipt,
@@ -124,7 +126,20 @@ export async function GET(request: Request) {
         tenant: shop.rows[0],
       };
     });
-    return Response.json(result, { headers: { "Cache-Control": "no-store" } });
+    const subscription =
+      auth.role === "owner" ? await subscriptionFor(tenant) : undefined;
+    const platformAdmin =
+      !auth.is_demo &&
+      !!(
+        await db.query(
+          "SELECT 1 FROM platform_admins WHERE user_id=$1 AND active",
+          [auth.user_id],
+        )
+      ).rowCount;
+    return Response.json(
+      { ...result, subscription, platformAdmin },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (e) {
     return errorResponse(e);
   }
@@ -145,7 +160,7 @@ const bookingSchema = z.object({
 export async function POST(request: Request) {
   try {
     requireOrigin(request);
-    const body = await request.json();
+    const body = await readJson(request);
     if (
       [
         "receive",
@@ -211,6 +226,7 @@ export async function POST(request: Request) {
         "A demonstração permite consultar os dados. Entre com uma conta administrativa para salvar alterações.",
         403,
       );
+    await assertSubscription(auth.tenant_id);
     const result = await transaction((c) =>
       idempotent(
         c,

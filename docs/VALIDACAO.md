@@ -105,3 +105,16 @@ Após aplicar: modo inspect da checagem pública confirmou os bundles novos; nav
 - Navegador público: área profissional e central sem overflow horizontal em 320 px; pop-up de exemplo conferido em 390 px; confirmação de envio desabilitada antes do checkbox.
 - TV publicada com três profissionais: 1280×720 e 1366×768 sem rolagem horizontal ou vertical. Nenhum atendimento estava em andamento no momento.
 - Evidências em docs/evidencias/elares-publicado-*.png. A prévia de pop-up é identificada como exemplo; a lógica da janela real foi validada por teste. Instalação física, entrega de WhatsApp e notificações com app fechado não foram executadas.
+
+
+## Dourado, temas e preparação SaaS — 26/10/2026 (local)
+
+- Suíte completa: 29/29 aprovados (registro local output/qa-final.tap). Inclui limites concorrentes por plano, ativação/renovação idempotentes, expiração, isolamento, recuperação, confirmação sem sessão automática, TOTP e código de recuperação de uso único, exportação e anonimização.
+- O teste de remarcação foi corrigido para distinguir histórico já processado pelo worker e lembretes antigos pendentes. Não alterou regras de envio.
+- Compilação de produção e tipos passaram. npm audit --omit=dev retornou zero vulnerabilidades conhecidas. Isso não equivale a auditoria independente ou prova de ausência de falhas.
+- Criação de backup AES-GCM e restauração real em uma base temporária local concluídas; nenhuma restauração na hospedagem. Envio externo ainda não homologado.
+- Navegador local: logo e ícones dourados, temas claro/escuro, preferência preservada após recarga, menu fecha por toque fora, sem overflow em 320 px (conteúdo 305 px) e 1366 px (conteúdo 1351 px). Evidências: tema-claro-dourado-mobile.png, tema-dourado-mobile.png e tema-dourado-desktop.png.
+- Prévia de produção local: CSP com nonce correspondente ao HTML e strict-dynamic nas páginas verificadas, fontes sem dependência de Google Fonts. Console da prévia sem avisos/erros na primeira conferência. Um aviso Event ocorreu durante recompilações no ambiente dev; após recarga, a interface funcionou.
+- Sondagem curta na prévia compilada: 20/20 respostas HTTP 200 em /api/health, concorrência 5, p95 342 ms. Não é teste de capacidade comercial. Registro local output/qa-prod-preview.json.
+- A inspeção HTTP revelou ausência da página /comecar apesar do formulário e API implementados. Rota adicionada e verificação de HTTP 200/conteúdo incorporada ao teste SaaS.
+- Aplicação e worker locais permaneceram ativos. Não houve pagamento, envio de e-mail externo nem mensagem WhatsApp. A nova etapa ainda não foi publicada. Dependências comerciais em VERSAO_FINAL.md.

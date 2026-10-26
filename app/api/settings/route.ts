@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/http";
 import { requireOrigin, requireSession } from "@/lib/auth";
 import { auth } from "@/lib/auth-engine";
 import { db, transaction } from "@/lib/db";
@@ -6,6 +7,7 @@ import { randomUUID, randomBytes, createHash } from "node:crypto";
 import { HttpError, errorResponse, amountSchema, dateSchema } from "@/lib/http";
 import { instant } from "@/lib/availability";
 import { audit } from "@/lib/finance";
+import { assertProfessionalCapacity } from "@/lib/subscription";
 export async function GET() {
   try {
     const s = await requireSession(["owner"]);
@@ -76,7 +78,7 @@ export async function POST(request: Request) {
   try {
     requireOrigin(request);
     const s = await requireSession(["owner"], true);
-    const body = await request.json();
+    const body = await readJson(request);
     if (s.is_demo && String(body.action).startsWith("user_"))
       throw new HttpError(
         "As contas da demonstração são fixas. Use uma conta administrativa para gerenciar acessos.",
@@ -183,6 +185,7 @@ export async function POST(request: Request) {
           })
           .parse(body);
         const id = d.id || randomUUID();
+        if (d.active) await assertProfessionalCapacity(c, s.tenant_id, d.id);
         if (d.id) {
           if (
             !(

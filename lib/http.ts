@@ -12,6 +12,7 @@ export class HttpError extends Error {
   }
 }
 export function errorResponse(error: unknown) {
+  const headers = { "Cache-Control": "private, no-store" };
   if (error instanceof z.ZodError)
     return Response.json(
       {
@@ -21,33 +22,88 @@ export function errorResponse(error: unknown) {
           message: i.message,
         })),
       },
-      { status: 400 },
+      { status: 400, headers },
     );
-  const e = error as Error & { code?: string; status?: number };
+  if (error instanceof HttpError)
+    return Response.json(
+      { error: error.message },
+      { status: error.status, headers },
+    );
+  const e = error as { code?: string };
   if (e.code === "23P01")
     return Response.json(
       {
         error:
           "O profissional está ocupado ou bloqueado neste intervalo. Escolha outro horário.",
       },
-      { status: 409 },
+      { status: 409, headers },
     );
   if (e.code === "23505")
     return Response.json(
       { error: "Este registro já existe." },
-      { status: 409 },
+      { status: 409, headers },
     );
-  if (e.code)
+  if (e.code === "23503" || e.code === "23514" || e.code === "22003")
     return Response.json(
       {
         error: "Não foi possível salvar. Verifique os dados e tente novamente.",
       },
-      { status: 400 },
+      { status: 400, headers },
     );
-  return Response.json(
-    { error: e.message || "Não foi possível concluir a operação." },
-    { status: e.status || 400 },
+  const incident = crypto.randomUUID();
+  console.error(
+    JSON.stringify({
+      event: "request_failed",
+      incident,
+      code: /^[A-Z0-9_]{2,20}$/.test(e.code || "") ? e.code : "INTERNAL",
+    }),
   );
+  return Response.json(
+    {
+      error: "Não foi possível concluir a operação. Tente novamente.",
+      reference: incident,
+    },
+    {
+      status: /^(ECONN|ETIMEDOUT|57P|53300|08)/.test(e.code || "") ? 503 : 500,
+      headers,
+    },
+  );
+}
+export async function readJson(
+  request: Request,
+  maxBytes = 65536,
+): Promise<any> {
+  if (
+    !request.headers
+      .get("content-type")
+      ?.toLowerCase()
+      .startsWith("application/json")
+  )
+    throw new HttpError("Envie os dados em JSON.", 415);
+  if (Number(request.headers.get("content-length")) > maxBytes)
+    throw new HttpError("Conteúdo muito grande.", 413);
+  const reader = request.body?.getReader();
+  if (!reader) throw new HttpError("Informe os dados da operação.");
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  let text = "";
+  let size = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > maxBytes) {
+        await reader.cancel();
+        throw new HttpError("Conteúdo muito grande.", 413);
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+    return JSON.parse(text);
+  } catch (e) {
+    if (e instanceof HttpError) throw e;
+    throw new HttpError("JSON inválido.");
+  }
 }
 export async function rateLimit(key: string, max = 20, seconds = 900) {
   const hashed = createHash("sha256").update(key).digest("hex");

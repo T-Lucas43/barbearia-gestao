@@ -4,7 +4,8 @@ COPY package*.json ./
 RUN npm ci
 COPY . .
 ARG RELEASE_SHA=local
-ENV NEXT_TELEMETRY_DISABLED=1 NEXT_PUBLIC_DEMO_MODE=true
+ARG NEXT_PUBLIC_DEMO_MODE=true
+ENV NEXT_TELEMETRY_DISABLED=1 NEXT_PUBLIC_DEMO_MODE=$NEXT_PUBLIC_DEMO_MODE
 RUN BETTER_AUTH_SECRET=build-only-placeholder-not-used-at-runtime-2026 NODE_OPTIONS=--max-old-space-size=2048 npm run build
 RUN npm prune --omit=dev && rm -rf .next/cache
 RUN node -e "require('fs').writeFileSync('release.json',JSON.stringify({sha:process.argv[1]}))" "$RELEASE_SHA"

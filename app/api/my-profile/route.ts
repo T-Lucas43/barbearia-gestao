@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/http";
 import { requireSession, requireOrigin } from "@/lib/auth";
 import { db, transaction } from "@/lib/db";
 import { errorResponse, HttpError } from "@/lib/http";
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
         color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
       })
       .strict()
-      .parse(await request.json());
+      .parse(await readJson(request));
     await transaction(async (c) => {
       await c.query("SELECT set_config('app.user_id',$1,true)", [s.user_id]);
       await c.query(

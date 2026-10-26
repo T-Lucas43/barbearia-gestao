@@ -29,6 +29,8 @@ jobs:
       DEMO_MODE: "true"
       NEXT_PUBLIC_DEMO_MODE: "true"
       WHATSAPP_ENABLED: "false"
+      MAIL_TRANSPORT: capture
+      PUBLIC_SIGNUP_ENABLED: "true"
       NODE_OPTIONS: --max-old-space-size=2048
     steps:
       - uses: actions/checkout@v7.0.1

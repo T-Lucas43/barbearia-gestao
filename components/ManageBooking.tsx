@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Scissors, CalendarDays, Check, ArrowLeft } from "lucide-react";
 import { money, time, localDay } from "@/lib/domain";
 import Brand from "./Brand";
+import { ThemeControl } from "./ThemeProvider";
 type Reservation = {
   id: string;
   customer: string;
@@ -95,7 +96,10 @@ export default function ManageBooking({ id }: { id: string }) {
         <a href="/" className="brand">
           <Brand />
         </a>
-        <span className="pill">Minha reserva</span>
+        <div className="public-header-actions">
+          <ThemeControl />
+          <span className="pill">Minha reserva</span>
+        </div>
       </header>
       <section className="panel manage-card">
         <span className="eyebrow">SEU ATENDIMENTO</span>

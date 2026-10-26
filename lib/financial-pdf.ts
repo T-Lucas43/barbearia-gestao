@@ -75,7 +75,7 @@ export async function financialPDF(input: PDFReport): Promise<Buffer> {
     left = 40,
     width = W - 80;
   const green = "#171B21",
-    gold = "#F06432",
+    gold = "#d5ae59",
     ink = "#202630",
     muted = "#677589",
     line = "#E5E9EF";

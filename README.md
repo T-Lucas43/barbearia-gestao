@@ -1,10 +1,10 @@
 # Elares Barber — Gestão de barbearias
 
-Aplicação mobile first em Next.js/TypeScript e PostgreSQL. Marca, clientes e movimentações da demonstração são fictícios.
+Aplicação mobile first em Next.js/TypeScript e PostgreSQL. Clientes e movimentações da demonstração são fictícios. Identidade Elares Barber com temas claro, escuro e automático em dourado.
 
 ## Executar localmente
 
-Node 22+, npm e Docker Desktop:
+Node 22+ e npm. Opção com Docker Desktop:
 
 ```powershell
 npm ci
@@ -13,6 +13,8 @@ docker compose up -d
 npm run db:seed
 npm run dev
 ```
+
+Alternativa sem Docker: execute `npm run db:local:install` uma vez, depois `npm run db:local` em um terminal. Em outro, execute o seed e `npm run dev`. O banco nativo persiste fora do repositório, em `%LOCALAPPDATA%/ElaresBarber/postgres18`.
 
 Em outro terminal: `npm run worker`. Os lembretes ficam simulados enquanto `WHATSAPP_ENABLED=false`; `DEMO_MODE=true` sempre impede envio real.
 
@@ -55,7 +57,9 @@ Os testes usam dados fictícios e limpam somente os registros que criaram. Não 
 
 A esteira GitHub Actions valida tipos, testes e compilação em Linux. O pacote da ShardCloud é compilado em Docker local e preparado por `scripts/package-shard-node.py`, sem arquivos de ambiente. Veja [deploy](docs/DEPLOY_SHARDCLOUD.md), [progresso](docs/PROGRESSO.md), [validação](docs/VALIDACAO.md) e o [plano original](PLANO_IMPLEMENTACAO_CLAUDE.md).
 
-Limites atuais: onboarding comercial de múltiplas empresas, cobrança de assinatura, homologação real do WhatsApp e instalação em aparelhos físicos ainda não concluídos. A demonstração publicada deve permanecer com dados fictícios.
+Preparação comercial: cadastro multiempresa, planos configuráveis e cobrança manual implementados localmente. Há administração separada em `/administracao`, recuperação de senha, confirmação de e-mail, segundo fator, sessões, exportação/anonimização e verificações operacionais. Os preços continuam sem definição; os planos começam em rascunho.
+
+A liberação comercial depende de credencial PostgreSQL exclusiva, e-mail real, backup externo com recuperação comprovada, preços/documentos aprovados e homologação operacional. Veja [versão final](docs/VERSAO_FINAL.md) e [operação](docs/OPERACAO.md). A nova etapa ainda precisa ser publicada; a demonstração pública deve continuar com dados fictícios.
 
 ## Demonstração publicada
 

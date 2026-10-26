@@ -420,11 +420,14 @@ test("jornada, bloqueio, remarcação atômica e gestão pelo link pessoal", asy
   assert.equal(personal.appointment.starts_at.slice(0, 10), next);
   const old = (
     await db.query(
-      "SELECT status FROM notifications WHERE appointment_id=$1 AND version=0",
+      "SELECT kind,status FROM notifications WHERE appointment_id=$1 AND version=0",
       [a.id],
     )
   ).rows;
-  assert.ok(old.every((n) => n.status === "cancelled"));
+  // A confirmation already handled by the worker remains in the delivery history.
+  // Rescheduling must cancel old queued jobs, especially the future reminder.
+  assert.ok(old.every((n) => !["pending", "retry"].includes(n.status)));
+  assert.ok(old.some((n) => n.kind === "reminder" && n.status === "cancelled"));
   await ok("/api/manage", { ...manage, action: "cancel" }, "");
   personal = await ok("/api/manage", { ...manage, action: "get" }, "");
   assert.equal(personal.appointment.status, "cancelled");

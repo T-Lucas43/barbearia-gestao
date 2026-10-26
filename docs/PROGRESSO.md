@@ -47,3 +47,10 @@ Marca derivada dos vetores originais da Elares, com laranja solar, grafite e int
 Avisos dentro do app para cortes a dez minutos e lembretes pendentes. Barbeiro solicita à central; gestor/recepção prepara a conversa usando o único WhatsApp da barbearia. Validação de origem, permissões, consentimento e versão antes de redirecionar; reserva temporária por funcionário e confirmação manual de envio.
 
 24 testes locais e typecheck passaram. Formulário nativo conferido no navegador com destinatário inexistente, sem sair do sistema. Nenhuma conversa externa foi aberta na validação. Veja LEMBRETES_E_AVISOS.md para o fluxo e seus limites. Publicação concluída na fonte 93f27830a18a64d771669712270c1ac815886d97, com CI aprovada e conferência pública da interface, perfis, PostgreSQL e PDFs. O endereço existente foi preservado para manter os links compartilhados.
+
+
+## Temas dourados e preparação SaaS — 26/10/2026
+
+A direção visual mais recente substitui o laranja pelo dourado vivo, incluindo logo e ícones, com temas claro/escuro/automático. Implementação local de cadastro multiempresa, planos em rascunho sem preços aprovados, ativação manual auditada, limites concorrentes, vencimento e renovação. Administração da plataforma separada dos proprietários. Recuperação/confirmacão de e-mail, segundo fator, sessões, privacidade e histórico operacional acrescentados.
+
+Aplicação, banco nativo PostgreSQL e worker locais ativos. Backup criptografado restaurado em banco temporário local. Envio externo e liberação comercial dependem de serviços e decisões ainda não definidos. A última demonstração pública verificada permanece na fonte 93f2783; esta etapa não foi publicada. Estado atual e critérios em VERSAO_FINAL.md.

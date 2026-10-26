@@ -1,14 +1,16 @@
 import "dotenv/config";
 import { processNotifications } from "../lib/notification-worker";
 import { db } from "../lib/db";
+import { processScheduledBackup } from "../lib/backup";
 let busy = false;
 async function tick() {
   if (busy) return;
   busy = true;
   try {
     await processNotifications();
+    await processScheduledBackup();
   } catch (e) {
-    console.error("Falha no worker:", (e as Error).message);
+    console.error(JSON.stringify({ event: "worker_iteration_failed" }));
   } finally {
     busy = false;
   }

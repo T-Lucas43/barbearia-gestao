@@ -14,6 +14,7 @@ import { money, localDay } from "@/lib/domain";
 import { addDays } from "@/lib/calendar";
 import InstallAppButton from "./InstallAppButton";
 import Brand from "./Brand";
+import { ThemeControl } from "./ThemeProvider";
 import type { Professional, Service } from "./types";
 type Slot = {
   hour: string;
@@ -154,7 +155,10 @@ export default function Booking({
           <a className="brand" href="/">
             <Brand />
           </a>
-          <InstallAppButton />
+          <div className="public-header-actions">
+            <ThemeControl />
+            <InstallAppButton />
+          </div>
         </header>
       )}
       <main className="booking-layout">

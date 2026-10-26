@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/http";
 import { requireOrigin } from "@/lib/auth";
 import { transaction } from "@/lib/db";
 import { z } from "zod";
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
         date: dateSchema.optional(),
         hour: z.string().optional(),
       })
-      .parse(await request.json());
+      .parse(await readJson(request));
     const hash = createHash("sha256").update(b.token).digest("hex");
     await rateLimit("manage:" + hash, 120, 900);
     const result = await transaction(async (c) => {

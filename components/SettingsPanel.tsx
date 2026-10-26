@@ -14,6 +14,7 @@ import {
   MessageCircle,
   Building2,
 } from "lucide-react";
+import PrivacyPanel from "./PrivacyPanel";
 import { money, localDay } from "@/lib/domain";
 import { hourOf, minuteOf } from "@/lib/time-input";
 import type { Professional, Service } from "./types";
@@ -73,6 +74,7 @@ type Config = {
   self: string;
 };
 const sections = [
+  { id: "privacy", label: "Privacidade", icon: UserRound },
   { id: "shop", label: "Barbearia", icon: Building2 },
   { id: "pros", label: "Profissionais", icon: Users },
   { id: "services", label: "Serviços", icon: Scissors },
@@ -262,6 +264,7 @@ export default function SettingsPanel({
             {notice}
           </p>
         )}
+        {section === "privacy" && <PrivacyPanel demo={demo || readOnly} />}
         {section === "shop" && (
           <form
             onSubmit={form("tenant", (f) => ({

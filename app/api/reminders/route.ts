@@ -1,3 +1,4 @@
+import { readJson } from "@/lib/http";
 import { requireSession, requireOrigin } from "@/lib/auth";
 import { db, transaction } from "@/lib/db";
 import { audit } from "@/lib/finance";
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
         confirmed: z.boolean().optional(),
       })
       .strict()
-      .parse(await request.json());
+      .parse(await readJson(request));
     if (s.role === "barber" && input.action !== "request")
       throw new HttpError(
         "O envio é realizado pelo gestor ou pela recepção no WhatsApp da barbearia.",

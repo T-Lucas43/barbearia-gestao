@@ -1,9 +1,13 @@
 import { readFile, readdir } from "node:fs/promises";
 import { db, transaction } from "../lib/db";
+import { getMigrations } from "better-auth/db/migration";
+import { authOptions } from "../lib/auth-engine";
 export async function migrate() {
   await db.query(
     await readFile(new URL("./schema.sql", import.meta.url), "utf8"),
   );
+  const authentication = await getMigrations(authOptions);
+  await authentication.runMigrations();
   await transaction(async (c) => {
     await c.query(
       "SELECT pg_advisory_xact_lock(hashtext('barber-migrations'))",

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { db } from "./db";
 import { auth } from "./auth-engine";
 import { HttpError } from "./http";
+import { assertSubscription } from "./subscription";
 export const hash = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 export function sameOrigin(request: Request) {
@@ -55,6 +56,7 @@ export async function requireSession(
       "A demonstração permite consultar os dados. Entre com uma conta administrativa para salvar alterações.",
       403,
     );
+  if (write) await assertSubscription(s.tenant_id);
   return s;
 }
 export function requireOrigin(request: Request) {
