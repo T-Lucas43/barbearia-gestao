@@ -34,3 +34,13 @@ O teste concorrente usa PostgreSQL real e limpa apenas seus próprios registros 
 ## Limites
 
 Não validado como produção: autenticação individual, acessibilidade integral, restauração de backup, isolamento completo multiempresa, integrações externas, PWA instalada, recebimentos parciais, estornos, jornadas configuráveis ou retomada automática após reinício do Windows. A implementação atual é uma primeira versão local, não o MVP completo do plano.
+
+## Atualização: agenda e painel de TV
+
+- `npm test`: 10 testes passaram após a ampliação. Novos cenários: consulta por período com autorização, intervalo inválido, telefone/valores ausentes na API de TV, restrição ao proprietário, reservas simultâneas de barbeiros diferentes, virada de mês/ano e seleção independente do atual/próximo na TV.
+- `npm run typecheck`: sem erros após a atualização.
+- `npm run build`: compilação das rotas `/tv`, `/api/tv` e `/api/agenda` concluída.
+- Navegador: visão diária por profissional, semanal e mensal renderizadas; mensal e semanal sem overflow da página em viewport de 375 px (a semana usa rolagem interna).
+- Painel TV conferido em viewport 1920×1080: conteúdo cabe sem rolagem horizontal ou vertical, com três profissionais do seed. Captura em `docs/evidencias/painel-tv.png`.
+- O seed não contém atendimentos efetivamente em andamento no horário da conferência. A captura mostra essa situação real; lógica de dois atendimentos simultâneos foi validada por teste de domínio e reservas simultâneas por integração, não por atendimento real de clientes.
+- Não testado em hardware de Smart TV ou em outro dispositivo pela rede; não testados áudio, pareamento exclusivo ou funcionamento offline.

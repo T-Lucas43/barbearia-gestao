@@ -18,6 +18,7 @@ Em outro terminal: `npm run worker` para processar lembretes **simulados**.
 
 - Painel: http://127.0.0.1:3000
 - Página pública: http://127.0.0.1:3000/agendar/studio-da-navalha
+- Painel para TV: http://127.0.0.1:3000/tv (entrar como proprietário no mesmo navegador antes de abrir).
 - Senha fictícia local: `demo-local-2026`. Perfis disponíveis: proprietário e barbeiro Rafael.
 - Banco restrito a loopback, porta 5547. Dados persistem no volume Docker `barber_data`.
 
@@ -39,7 +40,13 @@ Os testes de integração criam e removem somente os próprios dados fictícios.
 
 Agenda com filtros e datas; proteção de sobreposição no PostgreSQL; reservas públicas em quatro passos; snapshots de preço e comissão; confirmação, início, cancelamento e conclusão; recebimento integral por Pix/dinheiro/cartão; comissões individuais; despesas e repasses com proteção concorrente; resultado diário; fila persistente de notificações simuladas; perfis locais com sessão revogável; layout responsivo.
 
-## Limites desta versão
+## Atualização: agenda e TV
+
+A aba Agenda possui quatro visões: Lista, Dia (horários por profissional), Semana e Mês. Todas preservam busca, filtro por profissional e abertura dos detalhes. Semana/mês consultam o período completo no servidor, com controle de acesso. A agenda permite reservas simultâneas para profissionais diferentes e bloqueia sobreposição no mesmo profissional.
+
+O painel `/tv` mostra um quadro por barbeiro, atendimento iniciado, horário previsto quando ainda não iniciado, próximos três atendimentos e contadores diários. Atualiza a cada 15 segundos, tem botão de tela cheia e omite telefone e valores. Nomes de clientes são abreviados no servidor. Requer sessão local do proprietário; pareamento exclusivo de aparelho de TV e implantação em rede são etapas futuras. Pode ser exibido pelo computador local conectado à TV.
+
+## Pendências para o MVP completo
 
 - Autenticação é uma porta de demonstração com senha compartilhada e perfil selecionável. Não fornece identidade individual ou controle seguro de contas para produção. Não exponha o servidor à internet.
 - Uma barbearia de demonstração; tenant aplicado às consultas privadas e relações, mas onboarding e isolamento multiempresa completo ainda precisam de testes e implementação.

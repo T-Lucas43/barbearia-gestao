@@ -312,3 +312,13 @@ Ao finalizar cada fase, informar o que funciona, o que foi testado, o que falta 
 
 > Leia este plano integralmente e as instruções aplicáveis do repositório. Inspecione a pasta e, antes da fundação, avalie os repositórios em https://github.com/topics/barbearia conforme a seção 1.1. Selecione e documente uma base reutilizável com licença compatível, melhore substancialmente o layout com prioridade mobile e execute as fases em ordem. Desenvolva o MVP local completo, preservando arquivos existentes. Use as premissas e regras financeiras deste documento como padrão configurável. Mantenha progresso, decisões e validação documentados. Priorize o uso no celular, a proteção contra conflito de agenda, o isolamento entre barbearias e a integridade de pagamentos e comissões. Não faça publicação, push ou envio real de mensagens sem autorização específica. Entregue funcionalidades persistidas e informe com precisão o que foi validado e o que depende de integração externa.
 
+## 14. Ampliação aprovada: visualizações de agenda e painel de TV
+
+- Oferecer Lista, Dia por profissional, Semana e Mês, com filtros e acesso aos mesmos atendimentos.
+- Permitir múltiplos cortes no mesmo horário quando os profissionais forem diferentes; impedir conflito de horário no mesmo profissional.
+- Tela para TV com atendimento atual e próximos por barbeiro, status, horários previstos e resumo do movimento.
+- Diferenciar horário previsto de atendimento realmente iniciado. Não afirmar que um corte começou somente pelo relógio.
+- Atualizar automaticamente e indicar falhas de conexão. Priorizar leitura à distância e tela cheia.
+- Não exibir telefone, valores, comissões ou nomes completos de clientes em tela de recepção.
+- Validar uso local e registrar separadamente pendências de pareamento, acesso pela rede e hardware real de TV.
+

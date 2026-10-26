@@ -25,11 +25,13 @@ import {
   Receipt,
   ExternalLink,
   Copy,
+  Monitor,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { money, localDay, time } from "@/lib/domain";
 import type { Data, Appointment } from "./types";
 import Booking from "./Booking";
+import Calendar from "./Calendar";
 const tabs: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Visão geral", icon: LayoutDashboard },
   { id: "agenda", label: "Agenda", icon: CalendarDays },
@@ -339,6 +341,17 @@ export default function Dashboard() {
             <strong>{tabs.find((t) => t.id === tab)?.label}</strong>
           </div>
           <div className="topbar-right">
+            {owner && (
+              <a
+                href="/tv"
+                target="_blank"
+                className="tv-launch"
+                title="Abrir painel para TV"
+              >
+                <Monitor size={18} />
+                <span>Modo TV</span>
+              </a>
+            )}
             <span className="local-badge">
               <span />
               Modo local
@@ -464,7 +477,9 @@ export default function Dashboard() {
                 <div className="panel-heading">
                   <div>
                     <h2>
-                      Agenda do dia{" "}
+                      {tab === "agenda"
+                        ? "Agenda de atendimentos"
+                        : "Agenda do dia"}{" "}
                       <span className="soft-count">{active.length}</span>
                     </h2>
                     <p>Seu próximo atendimento está aqui.</p>
@@ -509,56 +524,71 @@ export default function Dashboard() {
                     />
                   </label>
                 </div>
-                <div className="appointment-table">
-                  <div className="table-head">
-                    <span>HORÁRIO / CLIENTE</span>
-                    <span>SERVIÇO</span>
-                    <span>PROFISSIONAL</span>
-                    <span>STATUS</span>
-                    <span>VALOR</span>
-                  </div>
-                  {appointments.map((a) => (
-                    <button
-                      className="appointment-row"
-                      key={a.id}
-                      onClick={() => {
-                        setDetail(a);
-                        setMethod("Pix");
-                      }}
-                    >
-                      <div className="customer-cell">
-                        <strong className="time">{time(a.starts_at)}</strong>
-                        <div>
-                          <strong>{a.customer}</strong>
-                          <small>Até {time(a.ends_at)}</small>
-                        </div>
-                      </div>
-                      <span className="service-cell">{a.service_name}</span>
-                      <span className="professional-cell">
-                        <i style={{ background: a.color }} />
-                        {a.professional_name.split(" ")[0]}
-                      </span>
-                      <span className={`status ${a.status}`}>
-                        <i />
-                        {labels[a.status]}
-                      </span>
-                      <strong className="price-cell">{money(a.price)}</strong>
-                    </button>
-                  ))}
-                  {!appointments.length && (
-                    <div className="empty">
-                      <CalendarDays size={28} />
-                      <h3>Espaço para novos encontros.</h3>
-                      <p>Nenhum atendimento encontrado neste dia.</p>
-                      <button
-                        className="secondary"
-                        onClick={() => setModal("booking")}
-                      >
-                        Agendar atendimento
-                      </button>
+                {tab === "agenda" ? (
+                  <Calendar
+                    day={day}
+                    professionals={data.professionals}
+                    professional={pro}
+                    query={query}
+                    revision={data.appointments}
+                    onDay={setDay}
+                    onSelect={(a) => {
+                      setDetail(a);
+                      setMethod("Pix");
+                    }}
+                  />
+                ) : (
+                  <div className="appointment-table">
+                    <div className="table-head">
+                      <span>HORÁRIO / CLIENTE</span>
+                      <span>SERVIÇO</span>
+                      <span>PROFISSIONAL</span>
+                      <span>STATUS</span>
+                      <span>VALOR</span>
                     </div>
-                  )}
-                </div>
+                    {appointments.map((a) => (
+                      <button
+                        className="appointment-row"
+                        key={a.id}
+                        onClick={() => {
+                          setDetail(a);
+                          setMethod("Pix");
+                        }}
+                      >
+                        <div className="customer-cell">
+                          <strong className="time">{time(a.starts_at)}</strong>
+                          <div>
+                            <strong>{a.customer}</strong>
+                            <small>Até {time(a.ends_at)}</small>
+                          </div>
+                        </div>
+                        <span className="service-cell">{a.service_name}</span>
+                        <span className="professional-cell">
+                          <i style={{ background: a.color }} />
+                          {a.professional_name.split(" ")[0]}
+                        </span>
+                        <span className={`status ${a.status}`}>
+                          <i />
+                          {labels[a.status]}
+                        </span>
+                        <strong className="price-cell">{money(a.price)}</strong>
+                      </button>
+                    ))}
+                    {!appointments.length && (
+                      <div className="empty">
+                        <CalendarDays size={28} />
+                        <h3>Espaço para novos encontros.</h3>
+                        <p>Nenhum atendimento encontrado neste dia.</p>
+                        <button
+                          className="secondary"
+                          onClick={() => setModal("booking")}
+                        >
+                          Agendar atendimento
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="panel-footer">
                   <span>
                     <span className="online-dot" />
