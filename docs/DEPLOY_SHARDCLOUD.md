@@ -40,3 +40,7 @@ Preserve BETTER_AUTH_SECRET entre releases, pois também protege os links pessoa
 
 Instalação em aparelho físico, pareamento de Smart TV e entrega real de WhatsApp ainda não foram homologados. A implantação é uma demonstração com dados fictícios.
 
+
+## Cache entre atualizações
+
+Next 16.4 usa build/server/route-cache com identidades de rota estáveis. Como o upload mescla diretórios, o pacote agora arquiva esse cache gerado em .cache/navalha-previous-caches quando release.json muda, antes de iniciar Next. O banco é preservado. A checagem pública também verifica os bundles referenciados pelo HTML, pois health novo isoladamente não comprova a interface nova.

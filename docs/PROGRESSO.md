@@ -31,3 +31,5 @@ WhatsApp continua simulado e a instalação em dispositivos físicos permanece p
 Duas contas de demonstração interativas: gestor vinculado ao Rafael e profissional vinculado ao Leonardo. O profissional tem Cortes, Agenda, Financeiro, Lembretes e Configurações próprios, com filtros e permissões no servidor. Contas demo não alteram credenciais nem gerenciam usuários.
 
 Registro avulso concluído, recebimento imediato ou pendente, divisão contratada, idempotência, sem reserva de horário ou WhatsApp. Navegação retorna ao topo. Build e typecheck locais concluídos. Publicação da atualização em andamento.
+
+Publicação da atualização concluída em https://navalha-gestao.shardweb.app/. Release 20623ab confirmada por health e checagem dos dois perfis. Suíte final 19/19 e CI concluída.

@@ -73,3 +73,17 @@ Limites: instalação em celular físico e Smart TV não realizada; webhook real
 Não realizados: instalação física PWA, pareamento físico de TV, envio real de WhatsApp, teste de carga ou recuperação completa da hospedagem. Backup/restauração anteriores são locais; esta verificação pública confirma persistência após reinício da aplicação.
 
 - Ajuste final da TV, fonte 3ef5777: prévia local com três profissionais em 1280x720, 1366x768 e 1920x1080, sem overflow horizontal ou vertical. A versão final substitui a altura anterior que excedia Full HD.
+
+## Perfis e cortes publicados — 26/10/2026
+
+- Fonte publicada: 20623ab540fb8539104f7bdb6b4e8c95581fae4e. ZIP compacto SHA256 6d11194d567f5eed34b959fc858d06f6156931e458cd3f220b199d58b5bc981a.
+- Typecheck, build local e Linux concluídos. Suíte local final: 19/19. CI 20623ab e 092c5e9: sucesso. O segundo commit altera somente a asserção do teste para respeitar a divisão configurada.
+- Checagem pública confirmou release exata, PostgreSQL, login dos dois perfis, isDemo, acesso próprio do profissional, bloqueio de outro profissional e administração, exportação PDF, PWA, TV e reserva fictícia.
+- Navegador local em 375 px: cinco abas, corte avulso salvo pelo profissional, sem overflow horizontal e retorno de scrollY=1393 para 0 ao selecionar Financeiro.
+- WhatsApp permanece simulado; uso de dados reais na demonstração não indicado.
+
+### Correção da interface antiga
+
+A checagem inicial de API passou, mas o HTML ainda referenciava bundles antigos por causa de build/server/route-cache persistente. Corrigido no empacotador: arquiva cache por mudança de release antes de iniciar. Pacote final SHA256 7ec8fd3d2e9d0b63a5db2ea9cd139bafa10374784b21199ef321b0e3660ad29b.
+
+Após aplicar: modo inspect da checagem pública confirmou os bundles novos; navegador mostrou os dois botões e login profissional abriu Cortes com somente as cinco seções próprias. Evidências: publicado-dois-perfis.png e publicado-profissional.png.

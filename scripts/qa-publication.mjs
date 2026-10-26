@@ -25,12 +25,18 @@ async function post(path, body, cookie, origin = base) {
   });
 }
 const healthResponse = await get("/api/health");
+const home = await (await get("/")).text();
+const sources = [...home.matchAll(/src="([^\"]+\.js)"/g)].map(match => match[1]);
+const bundles = await Promise.all(sources.filter(src => src.startsWith("/_next/")).map(async src => (await get(src)).text()));
+assert.ok(bundles.some(code => code.includes("Gestor e barbeiro") && code.includes("Registrar avulso")), "O HTML público ainda aponta para a interface anterior.");
 assert.equal(healthResponse.status, 200);
 const health = await healthResponse.json();
 assert.equal(health.release, expected);
 assert.equal(health.database, "postgresql");
 assert.equal(health.demo, true);
-if (mode === "prepare") {
+if (mode === "inspect") {
+  console.log(JSON.stringify({health, interface: "gestor, profissional e registro avulso presentes nos bundles referenciados pelo HTML"}));
+} else if (mode === "prepare") {
   const login = await post("/api/session", {
     email: "dono@navalha.local",
     password: env.INITIAL_LOCAL_PASSWORD,

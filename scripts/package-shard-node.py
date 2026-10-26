@@ -39,9 +39,18 @@ with ZipFile(source) as original, ZipFile(target, 'w', ZIP_DEFLATED, compresslev
         with original.open(original_name) as incoming, output.open(item, 'w') as outgoing:
             copyfileobj(incoming, outgoing)
     output.writestr('runtime-links.json', json.dumps(runtime_links))
-    output.writestr('start.js', """import {existsSync,readFileSync,symlinkSync} from 'node:fs';
+    output.writestr('start.js', """import {existsSync,readFileSync,writeFileSync,mkdirSync,renameSync,symlinkSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
+// Uploads merge files. Next's route-cache uses route identities across builds;
+// archive that generated cache when the compiled release changes.
+const release=JSON.parse(readFileSync('release.json','utf8')).sha;
+const stamp='.cache/navalha-release';
+if(!existsSync(stamp)||readFileSync(stamp,'utf8')!==release) {
+  mkdirSync('.cache/navalha-previous-caches',{recursive:true});
+  if(existsSync('build/server/route-cache'))renameSync('build/server/route-cache',`.cache/navalha-previous-caches/${Date.now()}-${release}`);
+  writeFileSync(stamp,release);
+}
 if (!existsSync('node_modules/next/package.json')) {
   const install=spawnSync('npm',['ci','--omit=dev','--no-audit','--no-fund'],{stdio:'inherit'});
   if(install.status!==0)process.exit(install.status||1);
