@@ -8,6 +8,7 @@ import sys
 
 source = Path(sys.argv[1])
 target = Path(sys.argv[2])
+runtime_links = {}
 if source.resolve() == target.resolve():
     raise ValueError('Origem e destino devem ser diferentes.')
 with ZipFile(source) as original, ZipFile(target, 'w', ZIP_DEFLATED, compresslevel=6) as output:
@@ -21,16 +22,33 @@ with ZipFile(source) as original, ZipFile(target, 'w', ZIP_DEFLATED, compresslev
         # O formulário da hospedagem ignora diretórios ocultos no ZIP.
         if item.filename == '.next/' or item.filename.startswith('.next/'):
             item.filename = 'build' + item.filename[len('.next'):]
+        # O upload também remove node_modules aninhados. Preserve os módulos
+        # externos do Turbopack em vendor e restaure os caminhos ao iniciar.
+        if item.filename.startswith('build/'):
+            converted = []
+            for part in item.filename.split('/'):
+                if part == 'node_modules':
+                    runtime_links['/'.join(converted + ['node_modules'])] = '/'.join(converted + ['vendor'])
+                    converted.append('vendor')
+                else:
+                    converted.append(part)
+            item.filename = '/'.join(converted)
         if not item.filename:
             continue
         # A classe ZipInfo é reutilizada, preservando permissões Linux do runtime.
         with original.open(original_name) as incoming, output.open(item, 'w') as outgoing:
             copyfileobj(incoming, outgoing)
-    output.writestr('start.js', """import {existsSync} from 'node:fs';
+    output.writestr('runtime-links.json', json.dumps(runtime_links))
+    output.writestr('start.js', """import {existsSync,readFileSync,symlinkSync} from 'node:fs';
+import {resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 if (!existsSync('node_modules/next/package.json')) {
   const install=spawnSync('npm',['ci','--omit=dev','--no-audit','--no-fund'],{stdio:'inherit'});
   if(install.status!==0)process.exit(install.status||1);
+}
+const links=JSON.parse(readFileSync('runtime-links.json','utf8'));
+for(const [link,target] of Object.entries(links)) {
+  if(!existsSync(link))symlinkSync(resolve(target),resolve(link),process.platform==='win32'?'junction':'dir');
 }
 await import('./scripts/start.mjs');
 """)
