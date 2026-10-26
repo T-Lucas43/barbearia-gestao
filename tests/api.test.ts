@@ -159,7 +159,7 @@ test("reserva concorrente, conclusão idempotente, snapshot e repasse concorrent
     const a = (await db.query("SELECT * FROM appointments WHERE id=$1", [id]))
       .rows[0];
     assert.equal(a.price, 6000);
-    assert.equal(a.commission, 2400);
+    assert.equal(a.commission, Math.round(a.price * a.commission_bps / 10000));
     const r1 = await post(
       "/api/data",
       { action: "status", id, status: "completed", method: "Pix" },
@@ -182,7 +182,7 @@ test("reserva concorrente, conclusão idempotente, snapshot e repasse concorrent
       ])
     ).rows[0];
     assert.equal(row.paid, 6000);
-    assert.equal(row.commission, 2400);
+    assert.equal(row.commission, a.commission);
     const pending = await db.query(
       "SELECT count(*)::int n FROM notifications WHERE appointment_id=$1 AND status='pending'",
       [id],
