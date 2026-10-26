@@ -44,3 +44,17 @@ Não validado como produção: autenticação individual, acessibilidade integra
 - Painel TV conferido em viewport 1920×1080: conteúdo cabe sem rolagem horizontal ou vertical, com três profissionais do seed. Captura em `docs/evidencias/painel-tv.png`.
 - O seed não contém atendimentos efetivamente em andamento no horário da conferência. A captura mostra essa situação real; lógica de dois atendimentos simultâneos foi validada por teste de domínio e reservas simultâneas por integração, não por atendimento real de clientes.
 - Não testado em hardware de Smart TV ou em outro dispositivo pela rede; não testados áudio, pareamento exclusivo ou funcionamento offline.
+
+## Ampliação operacional — 25/10/2026
+
+- Integração local: 17 testes principais passaram; teste adicional da conta pública de consulta também passou com asserções de leitura e bloqueio de escrita/troca de senha.
+- GitHub Actions no commit 171cd07: 18 testes, 18 aprovados, nenhum erro; typecheck e build concluídos. A etapa posterior de upload falhou por cota de artifacts da conta, sem afetar esses resultados. A esteira passou a validar sem upload; pacote Linux é gerado por Docker local.
+- Backup AES-GCM criado e restaurado em banco temporário: 191 atendimentos e quatro usuários conferidos. A base original foi preservada.
+- PDF financeiro com dados fictícios: dez páginas A4 renderizadas e inspecionadas; extração confirmou texto em todas e zero caracteres fora dos limites. Ensaio com nomes longos em nove páginas também inspecionado. Ajustado espaço mínimo para manter título/cabeçalho com a primeira linha.
+- Menu mobile testado no navegador integrado: botão X e toque no fundo fecham em 375px; Escape fecha e restaura foco em 320px; selecionar Serviços fecha em 390px. Rolagem do corpo liberada após fechar e sem overflow horizontal nesses viewports. Evidência: docs/evidencias/menu-mobile.png.
+- Worker local iniciado em modo simulado. Nenhuma mensagem externa enviada.
+- Banco e role exclusivos criados na ShardCloud após aprovação específica, mas a conexão pública encerra o acesso da role customizada. Uso de conexão administrativa compartilhada permanece dependente de aprovação específica; nenhuma publicação funcional confirmada até este registro.
+
+Limites: instalação em celular físico e Smart TV não realizada; webhook real e entrega de WhatsApp não homologados; publicação/persistência na hospedagem ainda não verificadas. A ampliação substitui as pendências já concluídas descritas nas seções históricas acima.
+
+- Commit bdbee05: esteira GitHub concluída com sucesso (typecheck, 18 testes e build). Pacote Linux compilado também em Docker local: 185.477.283 bytes, SHA256 45FB6DA187F5DF697807B1851DDBFE87D3C280F795FBF64403720303EA86C074. Nenhum arquivo de ambiente incluído no pacote.
