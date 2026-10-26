@@ -1,302 +1,527 @@
-import { session, hash, sameOrigin } from "@/lib/auth";
+import { session, requireOrigin } from "@/lib/auth";
 import { db, transaction } from "@/lib/db";
-import { commission, localDay } from "@/lib/domain";
-import { randomBytes } from "node:crypto";
+import { localDay, commission } from "@/lib/domain";
+import { addDays } from "@/lib/calendar";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import {
+  HttpError,
+  errorResponse,
+  dateSchema,
+  amountSchema,
+  methodSchema,
+  idempotent,
+  rateLimit,
+} from "@/lib/http";
+import { createBooking, rescheduleBooking, cancelBooking } from "@/lib/booking";
+import {
+  lockAppointment,
+  receipt,
+  refund,
+  balances,
+  financialReport,
+  cashMovement,
+  audit,
+} from "@/lib/finance";
 export async function GET(request: Request) {
-  const auth = await session();
-  if (!auth)
-    return Response.json({ error: "Entre para continuar" }, { status: 401 });
-  const day = new URL(request.url).searchParams.get("day") || localDay();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(day))
-    return Response.json({ error: "Data inválida" }, { status: 400 });
-  const tenant = auth.tenant_id;
-  const pid = auth.role === "barber" ? auth.professional_id : null;
-  const [
-    professionals,
-    services,
-    appointments,
-    expenses,
-    payouts,
-    notifications,
-    totals,
-  ] = await Promise.all([
-    db.query(
-      "SELECT * FROM professionals WHERE tenant_id=$1 AND ($2::text IS NULL OR id=$2)",
-      [tenant, pid],
-    ),
-    db.query("SELECT * FROM services WHERE tenant_id=$1 ORDER BY price", [
-      tenant,
-    ]),
-    db.query(
-      "SELECT a.*,p.name professional_name,p.color,s.name service_name FROM appointments a JOIN professionals p ON p.id=a.professional_id JOIN services s ON s.id=a.service_id WHERE a.tenant_id=$1 AND (a.starts_at AT TIME ZONE 'America/Sao_Paulo')::date=$2::date AND ($3::text IS NULL OR a.professional_id=$3) ORDER BY a.starts_at",
-      [tenant, day, pid],
-    ),
-    pid
-      ? Promise.resolve({ rows: [] })
-      : db.query(
-          "SELECT * FROM expenses WHERE tenant_id=$1 ORDER BY paid_at DESC",
+  try {
+    const auth = await session();
+    if (!auth) throw new HttpError("Entre para continuar", 401);
+    const day = dateSchema.parse(
+      new URL(request.url).searchParams.get("day") || localDay(),
+    );
+    const tenant = auth.tenant_id;
+    const pid = auth.role === "barber" ? auth.professional_id : null;
+    const payroll = auth.role !== "receptionist";
+    const result = await transaction(async (c) => {
+      await c.query(
+        "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY",
+      );
+      const [
+        professionals,
+        services,
+        appointments,
+        expenses,
+        payouts,
+        notifications,
+        totals,
+        finance,
+        shop,
+      ] = await Promise.all([
+        c.query(
+          "SELECT * FROM professionals WHERE tenant_id=$1 AND ($2::text IS NULL OR id=$2) ORDER BY active DESC,name",
+          [tenant, pid],
+        ),
+        c.query(
+          "SELECT * FROM services WHERE tenant_id=$1 ORDER BY active DESC,price",
           [tenant],
         ),
-    db.query(
-      "SELECT * FROM payouts WHERE tenant_id=$1 AND ($2::text IS NULL OR professional_id=$2) ORDER BY created_at DESC",
-      [tenant, pid],
-    ),
-    pid
-      ? Promise.resolve({ rows: [] })
-      : db.query(
-          "SELECT n.*,a.customer FROM notifications n JOIN appointments a ON a.id=n.appointment_id WHERE a.tenant_id=$1 ORDER BY n.due_at DESC LIMIT 30",
-          [tenant],
+        c.query(
+          "SELECT a.*,p.name professional_name,p.color,COALESCE(a.service_name_snapshot,s.name) service_name FROM appointments a JOIN professionals p ON p.id=a.professional_id JOIN services s ON s.id=a.service_id WHERE a.tenant_id=$1 AND (a.starts_at AT TIME ZONE 'America/Sao_Paulo')::date=$2::date AND ($3::text IS NULL OR a.professional_id=$3) ORDER BY a.starts_at",
+          [tenant, day, pid],
         ),
-    db.query(
-      "SELECT professional_id,COALESCE(sum(commission),0)::int earned FROM appointments WHERE tenant_id=$1 AND status='completed' AND ($2::text IS NULL OR professional_id=$2) GROUP BY professional_id",
-      [tenant, pid],
-    ),
-  ]);
-  return Response.json({
-    role: auth.role,
-    professionalId: pid,
-    professionals: professionals.rows,
-    services: services.rows,
-    appointments: appointments.rows,
-    expenses: expenses.rows,
-    payouts: payouts.rows,
-    notifications: notifications.rows,
-    totals: totals.rows,
-  });
+        auth.role === "owner"
+          ? c.query(
+              "SELECT * FROM expenses WHERE tenant_id=$1 ORDER BY paid_at DESC",
+              [tenant],
+            )
+          : Promise.resolve({ rows: [] }),
+        payroll
+          ? c.query(
+              "SELECT * FROM payouts WHERE tenant_id=$1 AND ($2::text IS NULL OR professional_id=$2) ORDER BY created_at DESC",
+              [tenant, pid],
+            )
+          : Promise.resolve({ rows: [] }),
+        auth.role === "owner"
+          ? c.query(
+              "SELECT n.id,n.kind,n.status,n.due_at,n.last_error,a.customer FROM notifications n JOIN appointments a ON a.id=n.appointment_id WHERE a.tenant_id=$1 ORDER BY n.due_at DESC LIMIT 50",
+              [tenant],
+            )
+          : Promise.resolve({ rows: [] }),
+        payroll ? balances(c, tenant, pid) : Promise.resolve([]),
+        payroll
+          ? financialReport(c, tenant, day, addDays(day, 1), pid)
+          : Promise.resolve(null),
+        c.query("SELECT * FROM tenants WHERE id=$1", [tenant]),
+      ]);
+      return {
+        role: auth.role,
+        readOnly: auth.read_only,
+        whatsappEnabled: process.env.WHATSAPP_ENABLED === "true",
+        name: auth.name,
+        professionalId: pid,
+        professionals: professionals.rows.map((p) =>
+          payroll
+            ? p
+            : {
+                id: p.id,
+                name: p.name,
+                color: p.color,
+                specialty: p.specialty,
+                active: p.active,
+              },
+        ),
+        services: services.rows.map((s) =>
+          payroll ? s : { ...s, commission_bps: undefined },
+        ),
+        appointments: appointments.rows.map((a) => ({
+          ...a,
+          manage_hash: undefined,
+          manage_cipher: undefined,
+          ...(!payroll
+            ? { commission: 0, commission_bps: 0, commission_fixed: 0 }
+            : {}),
+        })),
+        expenses: expenses.rows,
+        payouts: payouts.rows,
+        notifications: notifications.rows,
+        totals,
+        finance,
+        tenant: shop.rows[0],
+      };
+    });
+    return Response.json(result, { headers: { "Cache-Control": "no-store" } });
+  } catch (e) {
+    return errorResponse(e);
+  }
 }
-const booking = z.object({
-  action: z.literal("book"),
+const bookingSchema = z.object({
   professionalId: z.string(),
   serviceId: z.string(),
   customer: z.string().trim().min(2).max(100),
   phone: z.string().regex(/^\d{10,13}$/),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date: dateSchema,
   hour: z.string().regex(/^\d{2}:\d{2}$/),
   consent: z.boolean().default(false),
+  quotedPrice: amountSchema.optional(),
+  quotedDuration: z.number().int().positive().optional(),
+  internal: z.boolean().default(false),
+  slug: z.string().default("studio-da-navalha"),
 });
 export async function POST(request: Request) {
-  if (!sameOrigin(request))
-    return Response.json({ error: "Origem inválida" }, { status: 403 });
   try {
+    requireOrigin(request);
     const body = await request.json();
+    if (
+      [
+        "receive",
+        "refund",
+        "payout",
+        "advance",
+        "expense",
+        "cash_open",
+        "cash_close",
+        "discount",
+        "notification_reconcile",
+      ].includes(body.action) &&
+      !body.idempotencyKey
+    )
+      throw new HttpError("Informe a chave de idempotência da operação.");
     const auth = await session();
     if (body.action === "book") {
-      const b = booking.parse(body);
-      const publicBooking = !auth;
-      const tenant = auth?.tenant_id || "demo";
-      if (auth?.role === "barber" && b.professionalId !== auth.professional_id)
-        return Response.json({ error: "Sem permissão" }, { status: 403 });
-      const token = randomBytes(32).toString("hex");
-      const result = await transaction(async (c) => {
-        const service = (
-          await c.query("SELECT * FROM services WHERE id=$1 AND tenant_id=$2", [
-            b.serviceId,
-            tenant,
-          ])
-        ).rows[0];
-        const pro = (
-          await c.query(
-            "SELECT * FROM professionals WHERE id=$1 AND tenant_id=$2",
-            [b.professionalId, tenant],
-          )
-        ).rows[0];
-        if (!service || !pro)
-          throw new Error("Serviço ou profissional inválido");
-        const start = new Date(`${b.date}T${b.hour}:00-03:00`);
-        const end = new Date(+start + service.duration * 60000);
-        const minute =
-          Number(b.hour.slice(0, 2)) * 60 + Number(b.hour.slice(3));
-        const horizon = Date.now() + 60 * 86400000;
-        if (
-          !Number.isFinite(+start) ||
-          minute < 540 ||
-          minute + service.duration > 1080 ||
-          minute % 15 !== 0 ||
-          +start > horizon ||
-          (publicBooking && +start < Date.now())
-        )
-          throw new Error(
-            "Escolha um horário futuro entre 09h e 18h, em até 60 dias",
-          );
-        // Serializa limite público por contato para não ser contornado por concorrência.
-        await c.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
-          tenant + b.phone,
-        ]);
-        const recent = await c.query(
-          "SELECT count(*)::int n FROM appointments WHERE tenant_id=$1 AND phone=$2 AND created_at>now()-interval '1 hour'",
-          [tenant, b.phone],
+      const b = bookingSchema.parse(body);
+      if (b.internal && !auth)
+        throw new HttpError("Entre para criar reservas internas.", 401);
+      if (b.internal && auth?.read_only)
+        throw new HttpError(
+          "A demonstração é de consulta. Use uma conta administrativa para alterar dados.",
+          403,
         );
-        if (publicBooking && recent.rows[0].n >= 5)
-          throw new Error(
-            "Limite de reservas atingido. Entre em contato com a barbearia.",
-          );
-        const row = (
-          await c.query(
-            "INSERT INTO appointments(tenant_id,professional_id,service_id,customer,phone,starts_at,ends_at,price,commission_bps,commission,consent,manage_hash) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id",
-            [
-              tenant,
-              pro.id,
-              service.id,
-              b.customer,
-              b.phone,
-              start,
-              end,
-              service.price,
-              pro.commission_bps,
-              commission(service.price, pro.commission_bps),
-              b.consent,
-              hash(token),
-            ],
-          )
-        ).rows[0];
-        if (b.consent) {
-          await c.query(
-            "INSERT INTO notifications(appointment_id,kind,due_at) VALUES ($1,'confirmation',now())",
-            [row.id],
-          );
-          if (+start - 7200000 > Date.now())
+      const shop = b.internal
+        ? { id: auth!.tenant_id }
+        : (await db.query("SELECT id FROM tenants WHERE slug=$1", [b.slug]))
+            .rows[0];
+      if (!shop) throw new HttpError("Barbearia não encontrada.", 404);
+      if (
+        b.internal &&
+        auth?.role === "barber" &&
+        b.professionalId !== auth.professional_id
+      )
+        throw new HttpError("Sem permissão.", 403);
+      await rateLimit(
+        "book:" + shop.id + ":" + b.phone,
+        b.internal ? 100 : 10,
+        3600,
+      );
+      return Response.json(
+        await transaction((c) =>
+          idempotent(
+            c,
+            shop.id,
+            body.idempotencyKey || randomUUID(),
+            body,
+            async () => {
+              await c.query("SELECT set_config('app.user_id',$1,true)", [
+                auth?.user_id || "",
+              ]);
+              return createBooking(c, shop.id, b);
+            },
+          ),
+        ),
+      );
+    }
+    if (!auth) throw new HttpError("Entre para continuar.", 401);
+    if (auth.read_only)
+      throw new HttpError(
+        "A demonstração permite consultar os dados. Entre com uma conta administrativa para salvar alterações.",
+        403,
+      );
+    const result = await transaction((c) =>
+      idempotent(
+        c,
+        auth.tenant_id,
+        body.idempotencyKey || randomUUID(),
+        body,
+        async () => {
+          await c.query("SELECT set_config('app.user_id',$1,true)", [
+            auth.user_id,
+          ]);
+          if (body.action === "reschedule") {
+            const d = z
+              .object({ id: z.uuid(), date: dateSchema, hour: z.string() })
+              .parse(body);
+            const a = await lockAppointment(c, auth.tenant_id, d.id);
+            if (
+              auth.role === "barber" &&
+              a.professional_id !== auth.professional_id
+            )
+              throw new HttpError("Sem permissão.", 403);
+            return rescheduleBooking(c, auth.tenant_id, d.id, d.date, d.hour);
+          }
+          if (body.action === "status") {
+            const d = z
+              .object({
+                id: z.uuid(),
+                status: z.enum([
+                  "confirmed",
+                  "in_progress",
+                  "completed",
+                  "cancelled",
+                  "no_show",
+                ]),
+                method: methodSchema.optional(),
+                collect: z.boolean().optional(),
+              })
+              .parse(body);
+            const a = await lockAppointment(c, auth.tenant_id, d.id);
+            if (
+              auth.role === "barber" &&
+              a.professional_id !== auth.professional_id
+            )
+              throw new HttpError("Atendimento não encontrado.", 404);
+            if (a.status === d.status) return { ok: true };
+            if (["completed", "cancelled", "no_show"].includes(a.status))
+              throw new HttpError("Atendimento já encerrado.");
+            if (d.status === "cancelled")
+              return cancelBooking(c, auth.tenant_id, d.id);
+            if (d.status === "confirmed" && a.status !== "scheduled")
+              throw new HttpError("Transição inválida.");
+            if (d.status === "in_progress") {
+              const ongoing = await c.query(
+                "SELECT id FROM appointments WHERE professional_id=$1 AND tenant_id=$2 AND status='in_progress' AND id<>$3",
+                [a.professional_id, auth.tenant_id, a.id],
+              );
+              if (ongoing.rowCount)
+                throw new HttpError(
+                  "Finalize o atendimento em andamento deste profissional antes de iniciar outro.",
+                );
+            }
+            if (
+              d.status === "completed" &&
+              d.collect !== false &&
+              a.price > a.paid
+            )
+              await receipt(c, auth, d.id, {
+                amount: a.price - a.paid,
+                tip: 0,
+                fee: 0,
+                method: d.method || "Pix",
+              });
             await c.query(
-              "INSERT INTO notifications(appointment_id,kind,due_at) VALUES ($1,'reminder',$2)",
-              [row.id, new Date(+start - 7200000)],
+              "UPDATE appointments SET status=$1,completed_at=CASE WHEN $1='completed' THEN now() ELSE completed_at END WHERE id=$2",
+              [d.status, d.id],
             );
-        }
-        await c.query(
-          "INSERT INTO audit_log(tenant_id,action,entity_id) VALUES ($1,'book',$2)",
-          [tenant, row.id],
-        );
-        return row;
-      });
-      return Response.json({ ok: true, id: result.id, manageToken: token });
-    }
-    if (!auth)
-      return Response.json({ error: "Entre para continuar" }, { status: 401 });
-    if (body.action === "status") {
-      const data = z
-        .object({
-          id: z.uuid(),
-          status: z.enum([
-            "confirmed",
-            "in_progress",
-            "completed",
-            "cancelled",
-            "no_show",
-          ]),
-          method: z.enum(["Pix", "Dinheiro", "Cartão"]).optional(),
-        })
-        .parse(body);
-      await transaction(async (c) => {
-        const a = (
-          await c.query(
-            "SELECT * FROM appointments WHERE id=$1 AND tenant_id=$2 FOR UPDATE",
-            [data.id, auth.tenant_id],
-          )
-        ).rows[0];
-        if (
-          !a ||
-          (auth.role === "barber" && a.professional_id !== auth.professional_id)
-        )
-          throw new Error("Atendimento não encontrado");
-        if (a.status === data.status) return;
-        if (["completed", "cancelled", "no_show"].includes(a.status))
-          throw new Error("Atendimento já encerrado");
-        if (data.status === "confirmed" && a.status !== "scheduled")
-          throw new Error("Transição inválida");
-        await c.query(
-          "UPDATE appointments SET status=$1,paid=$2,payment_method=$3 WHERE id=$4",
-          [
-            data.status,
-            data.status === "completed" ? a.price : 0,
-            data.status === "completed" ? data.method || "Pix" : null,
-            data.id,
-          ],
-        );
-        if (["completed", "cancelled", "no_show"].includes(data.status))
-          await c.query(
-            "UPDATE notifications SET status='cancelled' WHERE appointment_id=$1 AND status='pending'",
-            [data.id],
-          );
-        await c.query(
-          "INSERT INTO audit_log(tenant_id,action,entity_id) VALUES ($1,$2,$3)",
-          [auth.tenant_id, data.status, data.id],
-        );
-      });
-      return Response.json({ ok: true });
-    }
-    if (auth.role !== "owner")
-      return Response.json(
-        { error: "Acesso do proprietário necessário" },
-        { status: 403 },
-      );
-    if (body.action === "expense") {
-      const d = z
-        .object({
-          description: z.string().trim().min(2).max(150),
-          amount: z.number().int().positive().max(100000000),
-        })
-        .parse(body);
-      await db.query(
-        "INSERT INTO expenses(tenant_id,description,amount) VALUES ($1,$2,$3)",
-        [auth.tenant_id, d.description, d.amount],
-      );
-      return Response.json({ ok: true });
-    }
-    if (body.action === "payout") {
-      const d = z
-        .object({
-          professionalId: z.string(),
-          amount: z.number().int().positive(),
-        })
-        .parse(body);
-      await transaction(async (c) => {
-        const pro = await c.query(
-          "SELECT id FROM professionals WHERE id=$1 AND tenant_id=$2 FOR UPDATE",
-          [d.professionalId, auth.tenant_id],
-        );
-        if (!pro.rowCount) throw new Error("Profissional não encontrado");
-        const earned = (
-          await c.query(
-            "SELECT COALESCE(sum(commission),0)::int n FROM appointments WHERE tenant_id=$1 AND professional_id=$2 AND status='completed'",
-            [auth.tenant_id, d.professionalId],
-          )
-        ).rows[0].n;
-        const paid = (
-          await c.query(
-            "SELECT COALESCE(sum(amount),0)::int n FROM payouts WHERE tenant_id=$1 AND professional_id=$2",
-            [auth.tenant_id, d.professionalId],
-          )
-        ).rows[0].n;
-        if (d.amount > earned - paid)
-          throw new Error("Valor maior que o saldo disponível");
-        const r = await c.query(
-          "INSERT INTO payouts(tenant_id,professional_id,amount) VALUES ($1,$2,$3) RETURNING id",
-          [auth.tenant_id, d.professionalId, d.amount],
-        );
-        await c.query(
-          "INSERT INTO audit_log(tenant_id,action,entity_id) VALUES ($1,'payout',$2)",
-          [auth.tenant_id, r.rows[0].id],
-        );
-      });
-      return Response.json({ ok: true });
-    }
-    return Response.json({ error: "Ação inválida" }, { status: 400 });
-  } catch (error) {
-    const e = error as Error & { code?: string };
-    if (e.code === "23P01")
-      return Response.json(
-        { error: "Este horário acabou de ser reservado. Escolha outro." },
-        { status: 409 },
-      );
-    return Response.json(
-      {
-        error:
-          error instanceof z.ZodError
-            ? "Confira os dados informados"
-            : e.code
-              ? "Não foi possível salvar. Tente novamente."
-              : e.message,
-      },
-      { status: 400 },
+            if (["completed", "no_show"].includes(d.status))
+              await c.query(
+                "UPDATE notifications SET status='cancelled',updated_at=now() WHERE appointment_id=$1 AND status IN ('pending','retry')",
+                [d.id],
+              );
+            await audit(c, auth.tenant_id, d.status, d.id);
+            return { ok: true };
+          }
+          if (body.action === "receive") {
+            const d = z
+              .object({
+                id: z.uuid(),
+                amount: amountSchema,
+                tip: amountSchema.default(0),
+                fee: amountSchema.default(0),
+                method: methodSchema,
+              })
+              .parse(body);
+            await receipt(c, auth, d.id, d);
+            return { ok: true };
+          }
+          if (body.action === "discount") {
+            if (auth.role === "barber")
+              throw new HttpError(
+                "Somente dono e recepção podem aplicar descontos.",
+                403,
+              );
+            const d = z
+              .object({ id: z.uuid(), amount: amountSchema })
+              .parse(body);
+            const a = await lockAppointment(c, auth.tenant_id, d.id);
+            if (!["scheduled", "confirmed", "in_progress"].includes(a.status))
+              throw new HttpError(
+                "Desconto deve ser definido antes da conclusão.",
+              );
+            const net = a.list_price - d.amount;
+            if (
+              net < 0 ||
+              net < a.paid ||
+              (a.commission_kind === "fixed" && a.commission_fixed > net)
+            )
+              throw new HttpError(
+                "Desconto incompatível com os recebimentos ou a comissão fixa.",
+              );
+            await c.query(
+              "UPDATE appointments SET discount=$1,price=$2,commission=$3 WHERE id=$4",
+              [
+                d.amount,
+                net,
+                a.commission_kind === "fixed"
+                  ? a.commission_fixed
+                  : commission(net, a.commission_bps),
+                a.id,
+              ],
+            );
+            await audit(c, auth.tenant_id, "discount", a.id);
+            return { ok: true };
+          }
+          if (body.action === "cash_open") {
+            if (auth.role === "barber")
+              throw new HttpError("Sem permissão.", 403);
+            const d = z.object({ amount: amountSchema }).parse(body);
+            await c.query("SELECT id FROM tenants WHERE id=$1 FOR UPDATE", [
+              auth.tenant_id,
+            ]);
+            await c.query(
+              "INSERT INTO cash_sessions(tenant_id,opening,opened_by) VALUES ($1,$2,$3)",
+              [auth.tenant_id, d.amount, auth.user_id],
+            );
+            return { ok: true };
+          }
+          if (body.action === "cash_close") {
+            if (auth.role === "barber")
+              throw new HttpError("Sem permissão.", 403);
+            const d = z
+              .object({
+                amount: amountSchema,
+                note: z.string().max(500).default(""),
+              })
+              .parse(body);
+            const cash = (
+              await c.query(
+                "SELECT * FROM cash_sessions WHERE tenant_id=$1 AND closed_at IS NULL FOR UPDATE",
+                [auth.tenant_id],
+              )
+            ).rows[0];
+            if (!cash) throw new HttpError("Nenhum caixa aberto.");
+            const moves = (
+              await c.query(
+                "SELECT COALESCE(sum(amount),0)::int total FROM cash_movements WHERE session_id=$1",
+                [cash.id],
+              )
+            ).rows[0].total;
+            const expected = cash.opening + moves;
+            if (d.amount !== expected && !d.note.trim())
+              throw new HttpError("Informe o motivo da diferença no caixa.");
+            await c.query(
+              "UPDATE cash_sessions SET closed_at=now(),closed_by=$1,counted=$2::int,expected=$3::int,difference=$2::int-$3::int,note=$4 WHERE id=$5",
+              [auth.user_id, d.amount, expected, d.note, cash.id],
+            );
+            await audit(c, auth.tenant_id, "cash_close", cash.id);
+            return { ok: true };
+          }
+          if (auth.role !== "owner")
+            throw new HttpError("Acesso do proprietário necessário.", 403);
+          if (body.action === "notification_reconcile") {
+            const d = z
+              .object({
+                id: z.uuid(),
+                resolution: z.enum(["not_sent", "sent"]),
+                verified: z.literal(true),
+                providerId: z.string().max(300).optional(),
+              })
+              .parse(body);
+            const job = (
+              await c.query(
+                "SELECT n.* FROM notifications n JOIN appointments a ON a.id=n.appointment_id WHERE n.id=$1 AND a.tenant_id=$2 FOR UPDATE OF n",
+                [d.id, auth.tenant_id],
+              )
+            ).rows[0];
+            if (!job || !["unknown", "failed"].includes(job.status))
+              throw new HttpError(
+                "A tarefa não está disponível para conciliação.",
+              );
+            if (d.resolution === "sent" && !d.providerId?.trim())
+              throw new HttpError(
+                "Informe o identificador confirmado pelo provedor.",
+              );
+            await c.query(
+              "UPDATE notifications SET status=$1,provider_message_id=$2,due_at=now(),attempts=0,lease_token=NULL,lease_until=NULL,last_error='Conciliado manualmente pelo proprietário',updated_at=now() WHERE id=$3",
+              [
+                d.resolution === "not_sent" ? "pending" : "sent",
+                d.resolution === "sent" ? d.providerId : null,
+                d.id,
+              ],
+            );
+            await audit(
+              c,
+              auth.tenant_id,
+              "notification_reconcile_" + d.resolution,
+              d.id,
+            );
+            return { ok: true };
+          }
+          if (body.action === "refund") {
+            const d = z
+              .object({
+                paymentId: z.uuid(),
+                amount: amountSchema,
+                tip: amountSchema.default(0),
+                fee: amountSchema.default(0),
+                reason: z.string().trim().min(3).max(500),
+              })
+              .parse(body);
+            await refund(c, auth, d.paymentId, d);
+            return { ok: true };
+          }
+          if (body.action === "expense") {
+            const d = z
+              .object({
+                description: z.string().trim().min(2).max(150),
+                amount: amountSchema.refine((v) => v > 0),
+                method: methodSchema.default("Pix"),
+              })
+              .parse(body);
+            const row = (
+              await c.query(
+                "INSERT INTO expenses(tenant_id,description,amount,method) VALUES ($1,$2,$3,$4) RETURNING id",
+                [auth.tenant_id, d.description, d.amount, d.method],
+              )
+            ).rows[0];
+            await cashMovement(
+              c,
+              auth.tenant_id,
+              d.method,
+              -d.amount,
+              "expense",
+              row.id,
+            );
+            await audit(c, auth.tenant_id, "expense", row.id);
+            return { ok: true };
+          }
+          if (["payout", "advance"].includes(body.action)) {
+            const d = z
+              .object({
+                professionalId: z.string(),
+                amount: amountSchema.refine((v) => v > 0),
+                method: methodSchema.default("Pix"),
+                reason: z.string().max(500).default("Adiantamento"),
+              })
+              .parse(body);
+            const pro = await c.query(
+              "SELECT id FROM professionals WHERE id=$1 AND tenant_id=$2 FOR UPDATE",
+              [d.professionalId, auth.tenant_id],
+            );
+            if (!pro.rowCount)
+              throw new HttpError("Profissional não encontrado.", 404);
+            if (body.action === "payout") {
+              const balance = (
+                await balances(c, auth.tenant_id, d.professionalId)
+              )[0];
+              if (!balance || d.amount > balance.available)
+                throw new HttpError("Valor maior que o saldo disponível.");
+            }
+            const row =
+              body.action === "payout"
+                ? (
+                    await c.query(
+                      "INSERT INTO payouts(tenant_id,professional_id,amount,method) VALUES ($1,$2,$3,$4) RETURNING id",
+                      [auth.tenant_id, d.professionalId, d.amount, d.method],
+                    )
+                  ).rows[0]
+                : (
+                    await c.query(
+                      "INSERT INTO advances(tenant_id,professional_id,amount,method,reason) VALUES ($1,$2,$3,$4,$5) RETURNING id",
+                      [
+                        auth.tenant_id,
+                        d.professionalId,
+                        d.amount,
+                        d.method,
+                        d.reason,
+                      ],
+                    )
+                  ).rows[0];
+            await cashMovement(
+              c,
+              auth.tenant_id,
+              d.method,
+              -d.amount,
+              body.action,
+              row.id,
+            );
+            await audit(c, auth.tenant_id, body.action, row.id);
+            return { ok: true };
+          }
+          throw new HttpError("Ação inválida.");
+        },
+      ),
     );
+    return Response.json(result);
+  } catch (e) {
+    return errorResponse(e);
   }
 }

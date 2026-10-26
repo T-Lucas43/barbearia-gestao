@@ -10,12 +10,17 @@ async function post(path: string, body: object, cookie?: string) {
       Origin: base,
       ...(cookie ? { Cookie: cookie } : {}),
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ idempotencyKey: crypto.randomUUID(), ...body }),
   });
 }
 async function login(profile: string) {
   const r = await post("/api/session", {
-    profile,
+    email:
+      profile === "owner"
+        ? "dono@navalha.local"
+        : profile === "receptionist"
+          ? "recepcao@navalha.local"
+          : "rafael@navalha.local",
     password: "demo-local-2026",
   });
   assert.equal(r.status, 200);
@@ -87,6 +92,7 @@ test("profissionais diferentes podem receber cortes simultâneos", async () => {
   } finally {
     for (const id of ids) {
       await db.query("DELETE FROM audit_log WHERE entity_id=$1", [id]);
+      await db.query("DELETE FROM payments WHERE appointment_id=$1", [id]);
       await db.query("DELETE FROM appointments WHERE id=$1", [id]);
     }
   }
@@ -220,6 +226,7 @@ test("reserva concorrente, conclusão idempotente, snapshot e repasse concorrent
     if (id) {
       await db.query("DELETE FROM notifications WHERE appointment_id=$1", [id]);
       await db.query("DELETE FROM audit_log WHERE entity_id=$1", [id]);
+      await db.query("DELETE FROM payments WHERE appointment_id=$1", [id]);
       await db.query("DELETE FROM appointments WHERE id=$1", [id]);
     }
   }

@@ -4,6 +4,9 @@ export type Professional = {
   specialty: string;
   color: string;
   commission_bps?: number;
+  active?: boolean;
+  commission_kind?: "percent" | "fixed";
+  commission_fixed?: number;
 };
 export type Service = {
   id: string;
@@ -11,6 +14,8 @@ export type Service = {
   description: string;
   price: number;
   duration: number;
+  active?: boolean;
+  commission_bps?: number | null;
 };
 export type Appointment = {
   id: string;
@@ -26,9 +31,32 @@ export type Appointment = {
   commission: number;
   status: string;
   paid: number;
+  list_price?: number;
+  discount?: number;
 };
 export type Data = {
   role: string;
+  readOnly?: boolean;
+  whatsappEnabled?: boolean;
+  name: string;
+  tenant: {
+    name: string;
+    slug: string;
+    address: string;
+    phone: string;
+    cancellation_minutes: number;
+    reminder_minutes: number;
+  };
+  finance: {
+    shopShare: number;
+    received: number;
+    tips: number;
+    fees: number;
+    commissions: number;
+    tipsReleased: number;
+    expenses: number;
+    result: number | null;
+  } | null;
   professionalId: string | null;
   professionals: Professional[];
   services: Service[];
@@ -51,6 +79,20 @@ export type Data = {
     kind: string;
     status: string;
     due_at: string;
+    last_error?: string;
   }[];
-  totals: { professional_id: string; earned: number }[];
+  totals: {
+    service_total: number;
+    service_received: number;
+    shop_generated: number;
+    shop_released: number;
+    professional_id: string;
+    earned: number;
+    generated: number;
+    released: number;
+    tips: number;
+    paid: number;
+    advances: number;
+    available: number;
+  }[];
 };

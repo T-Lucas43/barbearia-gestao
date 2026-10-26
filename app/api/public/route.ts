@@ -1,23 +1,47 @@
-import { db } from "@/lib/db";
+import { db, transaction } from "@/lib/db";
+import { dateSchema, errorResponse, HttpError } from "@/lib/http";
+import { availableSlots } from "@/lib/availability";
 export async function GET(request: Request) {
-  const date = new URL(request.url).searchParams.get("date");
-  const [professionals, services, busy] = await Promise.all([
-    db.query(
-      "SELECT id,name,specialty,color FROM professionals WHERE tenant_id='demo'",
-    ),
-    db.query(
-      "SELECT id,name,description,price,duration FROM services WHERE tenant_id='demo' ORDER BY price",
-    ),
-    date && /^\d{4}-\d{2}-\d{2}$/.test(date)
-      ? db.query(
-          "SELECT professional_id,starts_at,ends_at FROM appointments WHERE tenant_id='demo' AND status NOT IN ('cancelled','no_show') AND (starts_at AT TIME ZONE 'America/Sao_Paulo')::date=$1::date",
-          [date],
-        )
-      : Promise.resolve({ rows: [] }),
-  ]);
-  return Response.json({
-    professionals: professionals.rows,
-    services: services.rows,
-    busy: busy.rows,
-  });
+  try {
+    const p = new URL(request.url).searchParams;
+    const slug = p.get("slug") || "studio-da-navalha";
+    const shop = (
+      await db.query(
+        "SELECT id,name,slug,address,phone,cancellation_minutes FROM tenants WHERE slug=$1",
+        [slug],
+      )
+    ).rows[0];
+    if (!shop) throw new HttpError("Barbearia não encontrada.", 404);
+    const date = p.get("date");
+    if (date) dateSchema.parse(date);
+    const professional = p.get("professionalId");
+    const service = p.get("serviceId");
+    const [professionals, services, slots] = await Promise.all([
+      db.query(
+        "SELECT id,name,specialty,color FROM professionals WHERE tenant_id=$1 AND active ORDER BY name",
+        [shop.id],
+      ),
+      db.query(
+        "SELECT id,name,description,price,duration FROM services WHERE tenant_id=$1 AND active ORDER BY price",
+        [shop.id],
+      ),
+      date && professional && service
+        ? transaction((c) =>
+            availableSlots(c, shop.id, date, professional, service),
+          )
+        : Promise.resolve([]),
+    ]);
+    return Response.json(
+      {
+        tenant: shop,
+        professionals: professionals.rows,
+        services: services.rows,
+        slots,
+        busy: [],
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (e) {
+    return errorResponse(e);
+  }
 }

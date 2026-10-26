@@ -1,13 +1,28 @@
+import "dotenv/config";
+import { processNotifications } from "../lib/notification-worker";
 import { db } from "../lib/db";
+let busy = false;
 async function tick() {
-  // Simulação explícita: não contata WhatsApp nem afirma entrega real.
-  const result = await db.query(
-    "UPDATE notifications n SET status=CASE WHEN a.status IN ('completed','cancelled','no_show') THEN 'cancelled' ELSE 'simulated' END, attempts=n.attempts+1 FROM appointments a WHERE a.id=n.appointment_id AND n.status='pending' AND n.due_at<=now() RETURNING n.id,n.status",
-  );
-  for (const row of result.rows)
-    console.log("[WhatsApp simulado]", row.id, row.status);
+  if (busy) return;
+  busy = true;
+  try {
+    await processNotifications();
+  } catch (e) {
+    console.error("Falha no worker:", (e as Error).message);
+  } finally {
+    busy = false;
+  }
 }
 await tick();
-setInterval(() => {
-  tick().catch(console.error);
-}, 15000);
+const timer = setInterval(() => void tick(), 10000);
+for (const signal of ["SIGINT", "SIGTERM"] as const)
+  process.on(signal, async () => {
+    clearInterval(timer);
+    await db.end();
+    process.exit(0);
+  });
+console.log(
+  process.env.WHATSAPP_ENABLED === "true"
+    ? "Worker de WhatsApp real iniciado."
+    : "Worker iniciado em modo simulado. Nenhuma mensagem real será enviada.",
+);

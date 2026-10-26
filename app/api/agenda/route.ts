@@ -26,5 +26,21 @@ export async function GET(request: Request) {
       auth.role === "barber" ? auth.professional_id : null,
     ],
   );
-  return Response.json({ appointments: rows });
+  return Response.json(
+    {
+      appointments: rows.map((a) => ({
+        ...a,
+        manage_hash: undefined,
+        manage_cipher: undefined,
+        ...(auth.role === "receptionist"
+          ? {
+              commission: 0,
+              commission_bps: undefined,
+              commission_fixed: undefined,
+            }
+          : {}),
+      })),
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

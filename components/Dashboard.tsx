@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Scissors,
   LayoutDashboard,
@@ -32,6 +32,12 @@ import { money, localDay, time } from "@/lib/domain";
 import type { Data, Appointment } from "./types";
 import Booking from "./Booking";
 import Calendar from "./Calendar";
+import SettingsPanel from "./SettingsPanel";
+import AccountPanel from "./AccountPanel";
+import FinancePanel from "./FinancePanel";
+import AppointmentPanel from "./AppointmentPanel";
+import NotificationsPanel from "./NotificationsPanel";
+import InstallAppButton from "./InstallAppButton";
 const tabs: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Visão geral", icon: LayoutDashboard },
   { id: "agenda", label: "Agenda", icon: CalendarDays },
@@ -39,6 +45,8 @@ const tabs: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "services", label: "Serviços", icon: Scissors },
   { id: "finance", label: "Financeiro", icon: Wallet },
   { id: "messages", label: "Lembretes", icon: MessageCircle },
+  { id: "settings", label: "Configurações", icon: Settings },
+  { id: "account", label: "Minha conta", icon: Users },
 ];
 const labels: Record<string, string> = {
   scheduled: "Agendado",
@@ -47,6 +55,31 @@ const labels: Record<string, string> = {
   completed: "Concluído",
   cancelled: "Cancelado",
   no_show: "Não compareceu",
+};
+const pageCopy: Record<string, [string, string]> = {
+  overview: [
+    "Tudo pronto para um bom dia.",
+    "Acompanhe o movimento e cuide do que faz seu negócio crescer.",
+  ],
+  agenda: ["Sua agenda, organizada.", "Um dia bem planejado começa por aqui."],
+  team: [
+    "Talento que faz a diferença.",
+    "Acompanhe sua equipe e a divisão dos serviços.",
+  ],
+  services: ["Cuidado em cada detalhe.", "Serviços e preços da sua barbearia."],
+  finance: [
+    "Cada valor, no seu lugar.",
+    "Recebimentos, participação dos profissionais e despesas com clareza.",
+  ],
+  messages: [
+    "Seu cliente bem informado.",
+    "Confirmações, alterações e lembretes de agendamento.",
+  ],
+  settings: [
+    "Do seu jeito.",
+    "Personalize a barbearia, a equipe e as regras do atendimento.",
+  ],
+  account: ["Seu acesso, protegido.", "Gerencie sua senha individual."],
 };
 export default function Dashboard() {
   const [data, setData] = useState<Data>();
@@ -64,6 +97,49 @@ export default function Dashboard() {
   const [busy, setBusy] = useState(false);
   const [method, setMethod] = useState("Pix");
   const [menu, setMenu] = useState(false);
+  const menuTrigger = useRef<HTMLButtonElement>(null);
+  const menuClose = useRef<HTMLButtonElement>(null);
+  const menuPanel = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    menuClose.current?.focus();
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenu(false);
+      }
+      if (event.key === "Tab") {
+        const items = menuPanel.current?.querySelectorAll<HTMLElement>(
+          "a[href],button:not(:disabled)",
+        );
+        if (!items?.length) return;
+        const first = items[0],
+          last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        }
+        if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    const desktop = matchMedia("(min-width: 761px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setMenu(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKey);
+      desktop.removeEventListener("change", closeOnDesktop);
+      menuTrigger.current?.focus();
+    };
+  }, [menu]);
   const load = useCallback(async () => {
     try {
       const r = await fetch(`/api/data?day=${day}`);
@@ -94,7 +170,7 @@ export default function Dashboard() {
       const r = await fetch("/api/data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, idempotencyKey: crypto.randomUUID() }),
       });
       const result = await r.json();
       if (!r.ok) throw Error(result.error);
@@ -118,11 +194,31 @@ export default function Dashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           password: f.get("password"),
-          profile: f.get("profile"),
+          email: f.get("email"),
         }),
       });
       if (!r.ok) throw Error("Senha incorreta");
       setError("");
+      await load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function enterDemo() {
+    setBusy(true);
+    setError("");
+    try {
+      const r = await fetch("/api/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "demo@navalha.local",
+          password: "DemoNavalha2026!",
+        }),
+      });
+      if (!r.ok) throw Error("Demonstração indisponível no momento.");
       await load();
     } catch (e) {
       setError((e as Error).message);
@@ -140,7 +236,7 @@ export default function Dashboard() {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(
-        `${location.origin}/agendar/studio-da-navalha`,
+        `${location.origin}/agendar/${data?.tenant.slug || "studio-da-navalha"}`,
       );
       setNotice("Link de agendamento copiado");
     } catch {
@@ -179,24 +275,28 @@ export default function Dashboard() {
           </span>
         </div>
         <section className="login-box">
+          <InstallAppButton />
           <span className="eyebrow">BEM-VINDO À NAVALHA</span>
           <h2>Seu dia começa aqui.</h2>
           <p className="muted">Entre no ambiente de demonstração local.</p>
           <form onSubmit={enter}>
             <label className="field">
-              Perfil
-              <select name="profile">
-                <option value="owner">Proprietário · Studio da Navalha</option>
-                <option value="rafa">Barbeiro · Rafael Costa</option>
-              </select>
+              Email
+              <input
+                name="email"
+                type="email"
+                autoComplete="username"
+                required
+                defaultValue="dono@navalha.local"
+              />
             </label>
             <label className="field">
-              Senha de demonstração
+              Senha
               <input
                 name="password"
                 type="password"
                 required
-                defaultValue="demo-local-2026"
+                autoComplete="current-password"
               />
             </label>
             <button className="primary wide" disabled={busy}>
@@ -209,12 +309,26 @@ export default function Dashboard() {
               {error}
             </p>
           )}
-          <p className="demo-note">
-            Dados fictícios · acesso local de desenvolvimento
-            <br />
-            Senha inicial: demo-local-2026
-          </p>
-          <a className="inline-link" href="/agendar/studio-da-navalha">
+          {process.env.NEXT_PUBLIC_DEMO_MODE === "true" && (
+            <>
+              <button
+                className="secondary wide demo-login"
+                disabled={busy}
+                onClick={enterDemo}
+              >
+                Explorar demonstração
+                <ArrowUpRight size={16} />
+              </button>
+              <p className="demo-note">
+                Demonstração com dados fictícios e acesso somente para consulta.
+                Para administrar, use sua conta individual.
+              </p>
+            </>
+          )}
+          <a
+            className="inline-link"
+            href={"/agendar/" + (data?.tenant.slug || "studio-da-navalha")}
+          >
             Ver página de agendamento
             <ArrowUpRight size={16} />
           </a>
@@ -241,8 +355,9 @@ export default function Dashboard() {
     (a) => !["cancelled", "no_show"].includes(a.status),
   );
   const completed = data.appointments.filter((a) => a.status === "completed");
-  const received = completed.reduce((s, a) => s + a.paid, 0);
-  const earned = completed.reduce((s, a) => s + a.commission, 0);
+  const received = (data.finance?.received || 0) + (data.finance?.tips || 0);
+  const earned =
+    (data.finance?.commissions || 0) + (data.finance?.tipsReleased || 0);
   const expensesDay = data.expenses.filter(
     (e) =>
       new Intl.DateTimeFormat("en-CA", {
@@ -257,7 +372,30 @@ export default function Dashboard() {
   });
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${menu ? "open" : ""}`}>
+      {menu && (
+        <button
+          type="button"
+          className="menu-backdrop"
+          aria-label="Fechar menu tocando fora"
+          onClick={() => setMenu(false)}
+          tabIndex={-1}
+        />
+      )}
+      <aside
+        ref={menuPanel}
+        id="navigation-menu"
+        aria-label="Menu principal"
+        className={`sidebar ${menu ? "open" : ""}`}
+      >
+        <button
+          ref={menuClose}
+          type="button"
+          className="mobile-menu-close icon-button"
+          aria-label="Fechar menu"
+          onClick={() => setMenu(false)}
+        >
+          <X size={21} />
+        </button>
         <a href="/" className="brand">
           <span className="brand-icon">
             <Scissors size={23} />
@@ -267,14 +405,18 @@ export default function Dashboard() {
         <div className="workspace">
           <span className="workspace-icon">SN</span>
           <div>
-            <strong>Studio da Navalha</strong>
+            <strong>{data.tenant.name}</strong>
             <small>Ambiente de demonstração</small>
           </div>
         </div>
         <span className="nav-label">ESPAÇO DE TRABALHO</span>
         <nav>
           {tabs
-            .filter((t) => owner || !["messages"].includes(t.id))
+            .filter(
+              (t) =>
+                (owner || !["messages", "settings"].includes(t.id)) &&
+                (data.role !== "receptionist" || t.id !== "team"),
+            )
             .map((t) => (
               <button
                 key={t.id}
@@ -319,19 +461,28 @@ export default function Dashboard() {
           <div className="account">
             <span className="avatar small">{owner ? "TL" : "RC"}</span>
             <div>
-              <strong>{owner ? "Minha barbearia" : "Rafael Costa"}</strong>
-              <small>{owner ? "Proprietário" : "Barbeiro"}</small>
+              <strong>{data.name}</strong>
+              <small>
+                {owner
+                  ? "Proprietário"
+                  : data.role === "receptionist"
+                    ? "Recepção"
+                    : "Barbeiro"}
+              </small>
             </div>
             <span className="online-dot" />
           </div>
         </div>
       </aside>
-      <div className="main-shell">
+      <div className="main-shell" inert={menu}>
         <header className="topbar">
           <div className="breadcrumb">
             <button
+              ref={menuTrigger}
               className="mobile-menu icon-button"
-              aria-label="Abrir menu"
+              aria-label={menu ? "Fechar menu" : "Abrir menu"}
+              aria-expanded={menu}
+              aria-controls="navigation-menu"
               onClick={() => setMenu(!menu)}
             >
               <Menu size={22} />
@@ -341,6 +492,7 @@ export default function Dashboard() {
             <strong>{tabs.find((t) => t.id === tab)?.label}</strong>
           </div>
           <div className="topbar-right">
+            <InstallAppButton />
             {owner && (
               <a
                 href="/tv"
@@ -367,37 +519,26 @@ export default function Dashboard() {
           </div>
         </header>
         <main className="content">
+          {data.readOnly && (
+            <div className="demo-banner">
+              <strong>Demonstração · dados fictícios</strong>
+              <span>
+                Explore a agenda, a divisão dos cortes e os relatórios. Esta
+                conta permite somente consulta.
+              </span>
+            </div>
+          )}
           <div className="page-heading">
             <div>
-              <span className="eyebrow">STUDIO DA NAVALHA</span>
-              <h1>
-                {tab === "overview"
-                  ? "Tudo pronto para um bom dia."
-                  : tab === "agenda"
-                    ? "Sua agenda, organizada."
-                    : tab === "team"
-                      ? "Talento que faz a diferença."
-                      : tab === "services"
-                        ? "Cuidado em cada detalhe."
-                        : tab === "finance"
-                          ? "Cada valor, no seu lugar."
-                          : "Seu cliente bem informado."}
-              </h1>
-              <p>
-                {tab === "overview"
-                  ? "Acompanhe o movimento e cuide do que faz seu negócio crescer."
-                  : tab === "agenda"
-                    ? "Um dia bem planejado começa por aqui."
-                    : tab === "team"
-                      ? "Acompanhe sua equipe e os valores de cada profissional."
-                      : tab === "services"
-                        ? "Serviços e preços da sua barbearia."
-                        : tab === "finance"
-                          ? "Recebimentos, comissões e despesas com clareza."
-                          : "Confirmações e lembretes dos seus agendamentos."}
-              </p>
+              <span className="eyebrow">{data.tenant.name.toUpperCase()}</span>
+              <h1>{pageCopy[tab]?.[0]}</h1>
+              <p>{pageCopy[tab]?.[1]}</p>
             </div>
-            <button className="primary" onClick={() => setModal("booking")}>
+            <button
+              className="primary"
+              disabled={data.readOnly}
+              onClick={() => setModal("booking")}
+            >
               <Plus size={18} />
               Novo agendamento
             </button>
@@ -430,7 +571,7 @@ export default function Dashboard() {
               Link de agendamento
             </button>
           </div>
-          {(tab === "overview" || tab === "finance") && (
+          {tab === "overview" && data.role !== "receptionist" && (
             <div className="stats">
               <Stat
                 label={
@@ -447,23 +588,27 @@ export default function Dashboard() {
                 icon={CalendarDays}
               />
               <Stat
-                label={owner ? "Comissões do dia" : "Minha comissão do dia"}
+                label={
+                  owner
+                    ? "Parte dos barbeiros no dia"
+                    : "Minha parte dos serviços"
+                }
                 value={money(earned)}
-                note="Geradas em atendimentos concluídos"
+                note="Disponíveis conforme os pagamentos recebidos"
                 icon={Scissors}
               />
               <Stat
                 label={owner ? "Resultado do dia" : "Ticket médio"}
                 value={money(
                   owner
-                    ? received - earned - expenses
+                    ? data.finance?.result || 0
                     : completed.length
                       ? Math.round(received / completed.length)
                       : 0,
                 )}
                 note={
                   owner
-                    ? "Recebido − comissões − despesas"
+                    ? "Recebido − participações − despesas − taxas"
                     : "Valor médio por atendimento"
                 }
                 icon={ArrowUpRight}
@@ -614,13 +759,15 @@ export default function Dashboard() {
                       simples.
                     </p>
                     <div className="link-preview">
-                      /agendar/studio-da-navalha
+                      /agendar/{data.tenant.slug}
                       <button aria-label="Copiar link" onClick={copy}>
                         <Copy size={15} />
                       </button>
                     </div>
                     <a
-                      href="/agendar/studio-da-navalha"
+                      href={
+                        "/agendar/" + (data?.tenant.slug || "studio-da-navalha")
+                      }
                       target="_blank"
                       className="light-button"
                     >
@@ -699,14 +846,17 @@ export default function Dashboard() {
               ))}
             </div>
           )}
-          {(tab === "team" || tab === "finance") && (
+          {tab === "team" && (
             <section className="panel">
               <div className="panel-heading">
                 <div>
-                  <h2>{owner ? "Comissões e repasses" : "Meu financeiro"}</h2>
+                  <h2>
+                    {owner ? "Participações e repasses" : "Meu financeiro"}
+                  </h2>
                   <p>
                     Saldo acumulado de todos os períodos · valores recebidos
-                    integralmente.
+                    proporcionalmente aos pagamentos. Comissões fixas e gorjetas
+                    constam no financeiro.
                   </p>
                 </div>
                 {owner && (
@@ -741,7 +891,10 @@ export default function Dashboard() {
                             .join("")}
                         </span>
                         <span className="pill">
-                          {(p.commission_bps || 0) / 100}% de comissão
+                          {p.commission_kind === "fixed"
+                            ? money(p.commission_fixed || 0) + " por serviço"
+                            : (p.commission_bps || 0) / 100 +
+                              "% para o barbeiro"}
                         </span>
                       </div>
                       <h3>{p.name}</h3>
@@ -757,7 +910,13 @@ export default function Dashboard() {
                         </div>
                         <div className="balance">
                           <dt>A receber</dt>
-                          <dd>{money(total - paid)}</dd>
+                          <dd>
+                            {money(
+                              data.totals.find(
+                                (t) => t.professional_id === p.id,
+                              )?.available || 0,
+                            )}
+                          </dd>
                         </div>
                       </dl>
                     </article>
@@ -767,122 +926,38 @@ export default function Dashboard() {
             </section>
           )}
           {tab === "finance" && (
-            <div className="finance-grid">
-              {owner && (
-                <section className="panel">
-                  <div className="panel-heading">
-                    <div>
-                      <h2>Despesas do dia</h2>
-                      <p>{dateText}</p>
-                    </div>
-                    <button
-                      className="secondary"
-                      onClick={() => setModal("expense")}
-                    >
-                      <Plus size={16} />
-                      Nova despesa
-                    </button>
-                  </div>
-                  {expensesDay.map((e) => (
-                    <div className="ledger-row" key={e.id}>
-                      <span className="ledger-icon">
-                        <Receipt size={18} />
-                      </span>
-                      <span>
-                        {e.description}
-                        <small>Despesa paga</small>
-                      </span>
-                      <strong className="negative">− {money(e.amount)}</strong>
-                    </div>
-                  ))}
-                  {!expensesDay.length && (
-                    <p className="empty">Sem despesas nesta data.</p>
-                  )}
-                  <div className="formula">
-                    Resultado operacional simplificado = recebimentos −
-                    comissões − despesas pagas. Repasses liquidam comissões e
-                    não são descontados novamente.
-                  </div>
-                </section>
-              )}
-              <section className="panel">
-                <div className="panel-heading">
-                  <h2>Histórico de repasses</h2>
-                  <Wallet size={19} />
-                </div>
-                {data.payouts.map((p) => (
-                  <div className="ledger-row" key={p.id}>
-                    <span className="ledger-icon">
-                      <Check size={18} />
-                    </span>
-                    <span>
-                      {
-                        data.professionals.find(
-                          (x) => x.id === p.professional_id,
-                        )?.name
-                      }
-                      <small>
-                        {new Date(p.created_at).toLocaleDateString("pt-BR")}
-                      </small>
-                    </span>
-                    <strong>{money(p.amount)}</strong>
-                  </div>
-                ))}
-                {!data.payouts.length && (
-                  <p className="empty">Nenhum repasse registrado.</p>
-                )}
-              </section>
-            </div>
+            <FinancePanel
+              readOnly={data.readOnly}
+              professionals={data.professionals}
+              role={data.role}
+              onChanged={load}
+              onAppointment={(id) => setDetail({ id } as Appointment)}
+            />
+          )}
+          {tab === "settings" && owner && (
+            <SettingsPanel onChanged={load} readOnly={data.readOnly} />
+          )}
+          {tab === "account" && (
+            <AccountPanel name={data.name} readOnly={data.readOnly} />
           )}
           {tab === "messages" && (
-            <section className="panel">
-              <div className="panel-heading">
-                <div>
-                  <h2>Lembretes de WhatsApp</h2>
-                  <p>Modo simulado · nenhuma mensagem real é enviada.</p>
-                </div>
-                <span className="pill">Integração pendente</span>
-              </div>
-              {data.notifications.map((n) => (
-                <div className="ledger-row" key={n.id}>
-                  <span className="ledger-icon">
-                    <MessageCircle size={18} />
-                  </span>
-                  <span>
-                    {n.customer}
-                    <small>
-                      {n.kind === "reminder"
-                        ? "Lembrete de 2 horas"
-                        : "Confirmação"}{" "}
-                      · {new Date(n.due_at).toLocaleString("pt-BR")}
-                    </small>
-                  </span>
-                  <span className="pill">
-                    {n.status === "simulated"
-                      ? "Simulado"
-                      : n.status === "cancelled"
-                        ? "Cancelado"
-                        : "Na fila"}
-                  </span>
-                </div>
-              ))}
-              {!data.notifications.length && (
-                <div className="empty">
-                  <MessageCircle size={30} />
-                  <h3>Seus lembretes aparecem aqui.</h3>
-                  <p>
-                    Ao agendar, o cliente pode consentir em receber mensagens.
-                  </p>
-                </div>
-              )}
-            </section>
+            <NotificationsPanel
+              data={data}
+              onChanged={load}
+              readOnly={data.readOnly}
+            />
           )}
           <footer className="app-footer">
             <span>
               navalha<span className="brand-dot">.</span>{" "}
               <small>Menos gestão. Mais cuidado.</small>
             </span>
-            <small>Versão local · dados fictícios · WhatsApp simulado</small>
+            <small>
+              Versão local ·{" "}
+              {data.whatsappEnabled
+                ? "WhatsApp habilitado"
+                : "WhatsApp simulado"}
+            </small>
           </footer>
         </main>
       </div>
@@ -959,6 +1034,8 @@ export default function Dashboard() {
             {modal === "booking" ? (
               <Booking
                 internal
+                slug={data.tenant.slug}
+                fixedProfessional={data.professionalId || undefined}
                 onDone={() => {
                   setModal(null);
                   void load();
@@ -966,119 +1043,12 @@ export default function Dashboard() {
                 }}
               />
             ) : detail ? (
-              <>
-                <span className="eyebrow">DETALHES DO ATENDIMENTO</span>
-                <h2>{detail.customer}</h2>
-                <span className={`status ${detail.status}`}>
-                  {labels[detail.status]}
-                </span>
-                <dl className="detail-list">
-                  <div>
-                    <dt>Serviço</dt>
-                    <dd>{detail.service_name}</dd>
-                  </div>
-                  <div>
-                    <dt>Profissional</dt>
-                    <dd>{detail.professional_name}</dd>
-                  </div>
-                  <div>
-                    <dt>Horário</dt>
-                    <dd>
-                      {time(detail.starts_at)} às {time(detail.ends_at)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>Valor</dt>
-                    <dd>{money(detail.price)}</dd>
-                  </div>
-                  <div>
-                    <dt>Comissão</dt>
-                    <dd>{money(detail.commission)}</dd>
-                  </div>
-                  <div>
-                    <dt>WhatsApp</dt>
-                    <dd>{detail.phone}</dd>
-                  </div>
-                </dl>
-                {!["completed", "cancelled", "no_show"].includes(
-                  detail.status,
-                ) && (
-                  <>
-                    <label className="field">
-                      Receber em
-                      <select
-                        value={method}
-                        onChange={(e) => setMethod(e.target.value)}
-                      >
-                        <option>Pix</option>
-                        <option>Dinheiro</option>
-                        <option>Cartão</option>
-                      </select>
-                    </label>
-                    <button
-                      className="primary wide"
-                      disabled={busy}
-                      onClick={() =>
-                        mutate({
-                          action: "status",
-                          id: detail.id,
-                          status: "completed",
-                          method,
-                        })
-                      }
-                    >
-                      <Check size={17} />
-                      Concluir e receber {money(detail.price)}
-                    </button>
-                    <div className="detail-actions">
-                      {detail.status === "scheduled" && (
-                        <button
-                          className="secondary"
-                          disabled={busy}
-                          onClick={() =>
-                            mutate({
-                              action: "status",
-                              id: detail.id,
-                              status: "confirmed",
-                            })
-                          }
-                        >
-                          Confirmar
-                        </button>
-                      )}
-                      {detail.status !== "in_progress" && (
-                        <button
-                          className="secondary"
-                          disabled={busy}
-                          onClick={() =>
-                            mutate({
-                              action: "status",
-                              id: detail.id,
-                              status: "in_progress",
-                            })
-                          }
-                        >
-                          Iniciar
-                        </button>
-                      )}
-                      <button
-                        className="text-button danger"
-                        disabled={busy}
-                        onClick={() => {
-                          if (confirm("Cancelar este atendimento?"))
-                            void mutate({
-                              action: "status",
-                              id: detail.id,
-                              status: "cancelled",
-                            });
-                        }}
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </>
-                )}
-              </>
+              <AppointmentPanel
+                readOnly={data.readOnly}
+                id={detail.id}
+                role={data.role}
+                onChanged={load}
+              />
             ) : (
               <>
                 <span className="eyebrow">FINANCEIRO</span>

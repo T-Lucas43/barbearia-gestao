@@ -10,25 +10,33 @@
     "test": "tsx --test tests/*.test.ts",
     "db:seed": "tsx scripts/seed.ts",
     "worker": "tsx scripts/worker.ts",
-    "format": "prettier --write app components lib scripts/*.ts tests next.config.ts"
+    "format": "prettier --write app components lib scripts/*.ts tests next.config.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "dev:lan": "tsx scripts/lan.ts",
+    "backup": "tsx scripts/backup.ts create",
+    "backup:verify": "tsx scripts/backup.ts verify"
   },
   "dependencies": {
+    "@js-temporal/polyfill": "^0.5.1",
+    "better-auth": "^1.7.13",
     "dotenv": "^17.2.0",
     "lucide-react": "^0.468.0",
     "next": "^16.0.0",
+    "pdfkit": "^0.20.2",
     "pg": "^8.16.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "tsx": "^4.23.15",
     "zod": "^4.1.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.0",
     "@types/node": "^22.0.0",
+    "@types/pdfkit": "^0.17.7",
     "@types/pg": "^8.15.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "prettier": "^3.9.10",
-    "tsx": "^4.20.0",
     "typescript": "^5.9.3"
   },
   "type": "module"

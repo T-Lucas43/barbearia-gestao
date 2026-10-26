@@ -1,32 +1,19 @@
 # Progresso
 
-Primeira entrega local. O plano original continua sendo o escopo-alvo, não uma declaração de implementação completa.
+Atualizado em 25/10/2026. O plano original descreve também funcionalidades futuras; este arquivo registra a implementação atual.
 
-| Fase | Estado |
+| Área | Estado |
 |---|---|
-| 0 Fundação | Implementada; banco Docker, schema aditivo, seed, aplicação e worker |
-| 1 Acesso e cadastros | Parcial: sessão de demonstração, proprietário/barbeiro e cadastros via seed |
-| 2 Agenda pública e interna | Parcial: reserva, filtros, status, concorrência, visões Lista/Dia/Semana/Mês e painel TV; faltam jornadas, folgas, remarcação e gestão pública |
-| 3 Financeiro do atendimento | Parcial: snapshot, comissão percentual e pagamento integral; faltam pagamentos parciais e estornos |
-| 4 Financeiro e repasses | Parcial: despesas, saldos e repasses; faltam caixa físico e conciliação avançada |
-| 5 Notificações | Simulação local com fila persistente; integração externa pendente |
-| 6 Qualidade e operação | Ver docs/VALIDACAO.md; produção não autorizada |
+| Fundação | PostgreSQL persistente, migrações aditivas, seed sem apagar dados e pool limitado |
+| Acesso | Contas individuais, proprietário/recepção/barbeiro, conta pública somente consulta, troca de senha e revogação por desativação |
+| Cadastros | Serviços, profissionais, divisão percentual/fixa, regras por serviço, jornada e bloqueios |
+| Agenda | Lista/Dia/Semana/Mês, concorrência por profissional, autoatendimento e remarcação atômica |
+| Financeiro | Ledger, parcial/dividido, desconto, taxas, gorjetas separadas, estornos, repasses, adiantamentos e caixa |
+| Relatórios | Período e perfil, CSV e PDF estilizado |
+| TV | Atual/próximos por profissional, dados mínimos e dispositivo revogável |
+| WhatsApp | Adaptador e webhook implementados; modo simulado, sem envio externo homologado |
+| Mobile | Layout responsivo, menu com fechar/toque fora, PWA e fallback offline sem dados privados |
+| Demonstração | Histórico e agenda futura fictícios; conta pública sem alterações |
+| Operação | Backup criptografado e restauração temporária verificados; pacote Docker Linux em preparação |
 
-## Próximos passos
-
-1. Autenticação individual mantida por biblioteca, onboarding e recepção.
-2. CRUD de profissionais, serviços e comissões; jornada e bloqueios.
-3. Remarcação atômica e autoatendimento com tokens.
-4. Ledger financeiro, pagamento parcial/dividido, estorno e caixa.
-5. Provedor WhatsApp oficial, outbox com leases e reconciliação.
-6. Backup/restauração e validação multiempresa antes de produção.
-7. Pareamento com perfil exclusivo para TV, operação em rede e instalação em aparelho real.
-
-## Atualização: visualizações e TV
-
-- Agenda com Lista, Dia por profissional, Semana e Mês, mantendo filtros e detalhes.
-- Consultas de períodos de até 42 dias, com tenant/perfil validados no servidor.
-- Reservas simultâneas para profissionais distintos verificadas em teste de integração.
-- Tela `/tv`: quadros por profissional, atendimento atual, próximo e fila; relógio, contadores, tela cheia e atualização de 15s.
-- Dados de TV limitados no servidor: sem telefone, financeiro ou nome completo do cliente.
-- Não há sincronização por WebSocket ou chamada sonora nesta etapa.
+Ainda faltam onboarding SaaS, cobrança de planos, homologação do provedor WhatsApp, testes em Smart TV/celular físico e ensaio de recuperação da hospedagem. Não confundir demonstração publicada com homologação comercial completa.

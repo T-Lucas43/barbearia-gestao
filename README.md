@@ -1,32 +1,48 @@
 # Navalha — gestão de barbearias
 
-Primeira versão local de desenvolvimento, mobile first, com Next.js, TypeScript e PostgreSQL. Identidade e dados são fictícios. Não é uma versão pronta para produção.
+Aplicação mobile first em Next.js/TypeScript e PostgreSQL. Marca, clientes e movimentações da demonstração são fictícios.
 
-## Executar
+## Executar localmente
 
-Requisitos: Node 22+, npm e Docker Desktop em execução.
+Node 22+, npm e Docker Desktop:
 
 ```powershell
-npm install
+npm ci
 Copy-Item .env.example .env
 docker compose up -d
 npm run db:seed
 npm run dev
 ```
 
-Em outro terminal: `npm run worker` para processar lembretes **simulados**.
+Em outro terminal: `npm run worker`. Os lembretes ficam simulados enquanto `WHATSAPP_ENABLED=false`; `DEMO_MODE=true` sempre impede envio real.
 
 - Painel: http://127.0.0.1:3000
-- Página pública: http://127.0.0.1:3000/agendar/studio-da-navalha
-- Painel para TV: http://127.0.0.1:3000/tv (entrar como proprietário no mesmo navegador antes de abrir).
-- Senha fictícia local: `demo-local-2026`. Perfis disponíveis: proprietário e barbeiro Rafael.
-- Banco restrito a loopback, porta 5547. Dados persistem no volume Docker `barber_data`.
+- Agendamento: http://127.0.0.1:3000/agendar/studio-da-navalha
+- TV: http://127.0.0.1:3000/tv
+- Contas locais: `dono@navalha.local`, `recepcao@navalha.local`, `rafael@navalha.local`; senha inicial local `demo-local-2026`.
+- Conta pública de consulta: `demo@navalha.local` / `DemoNavalha2026!`, quando DEMO_MODE estiver ativo.
+- PostgreSQL local: porta 5547, volume persistente `barber_data`.
 
-O seed é aditivo e não limpa os dados. Não execute `docker compose down -v` se quiser preservá-los.
+O seed é aditivo e não apaga dados. Não execute `docker compose down -v` para preservar o volume. Produção exige segredo próprio de autenticação, URL HTTPS e senha inicial administrativa exclusiva com pelo menos 16 caracteres. As contas existentes nunca têm a senha substituída pelo seed.
 
-## Verificações
+## Funcionalidades
 
-Com servidor e banco executando:
+- Agenda em Lista, Dia por profissional, Semana e Mês; profissionais diferentes atendem simultaneamente. PostgreSQL impede sobreposição do mesmo profissional.
+- Serviços e profissionais editáveis; preço/duração por profissional, jornadas, intervalos, bloqueios e regras de cancelamento.
+- Reserva pública em quatro passos, escolha de qualquer profissional disponível e link pessoal para cancelar ou remarcar.
+- Autenticação individual, proprietário, recepção e barbeiro; permissão e vínculo com a barbearia conferidos no servidor.
+- Divisão contratada percentual (ex.: 60% barbeiro / 40% barbearia) ou valor fixo. Regra e preço ficam preservados no atendimento. Gorjeta é independente e pertence ao barbeiro.
+- Recebimentos parciais/divididos, descontos, taxas, estornos vinculados ao recebimento original, despesas, repasses e adiantamentos. Caixa físico com abertura e fechamento.
+- Relatórios por período e por barbeiro; exportação CSV e PDF estilizado com totais, divisão, movimentos e paginação.
+- TV com quadro por barbeiro, atendimento atual e próximos; atualização a cada 15 segundos. Pareamento por dispositivo revogável, sem expor telefones ou financeiro.
+- Fila persistente de WhatsApp com consentimento, leases, retentativas e conciliação de resultado incerto. Adaptador oficial e webhook assinados implementados; envio real depende das credenciais e modelos aprovados da Meta.
+- Instalação PWA, ícones próprios e tela de indisponibilidade offline. Agenda, financeiro, sessões e links pessoais não ficam no cache offline.
+- Demonstração com histórico fictício, dias futuros, pagamentos e despesas. Conta pública sem permissão de alteração.
+- Menu mobile com botão de fechar, toque fora, Escape, controle de foco e fechamento ao trocar de seção.
+
+## Verificar
+
+Com banco e servidor locais ativos:
 
 ```powershell
 npm run typecheck
@@ -34,28 +50,8 @@ npm test
 npm run build
 ```
 
-Os testes de integração criam e removem somente os próprios dados fictícios. Não executar os testes contra bases reais.
+Os testes usam dados fictícios e limpam somente os registros que criaram. Não executar a suíte contra uma base real. `npm run backup` produz arquivo AES-GCM; `npm run backup:verify -- caminho` restaura apenas em uma base temporária. A chave deve ficar guardada separadamente.
 
-## Implementado
+A esteira GitHub Actions valida e compila em Linux antes de gerar o ZIP Docker para ShardCloud; o pacote não inclui arquivos de ambiente. Veja [deploy](docs/DEPLOY_SHARDCLOUD.md), [progresso](docs/PROGRESSO.md), [validação](docs/VALIDACAO.md) e o [plano original](PLANO_IMPLEMENTACAO_CLAUDE.md).
 
-Agenda com filtros e datas; proteção de sobreposição no PostgreSQL; reservas públicas em quatro passos; snapshots de preço e comissão; confirmação, início, cancelamento e conclusão; recebimento integral por Pix/dinheiro/cartão; comissões individuais; despesas e repasses com proteção concorrente; resultado diário; fila persistente de notificações simuladas; perfis locais com sessão revogável; layout responsivo.
-
-## Atualização: agenda e TV
-
-A aba Agenda possui quatro visões: Lista, Dia (horários por profissional), Semana e Mês. Todas preservam busca, filtro por profissional e abertura dos detalhes. Semana/mês consultam o período completo no servidor, com controle de acesso. A agenda permite reservas simultâneas para profissionais diferentes e bloqueia sobreposição no mesmo profissional.
-
-O painel `/tv` mostra um quadro por barbeiro, atendimento iniciado, horário previsto quando ainda não iniciado, próximos três atendimentos e contadores diários. Atualiza a cada 15 segundos, tem botão de tela cheia e omite telefone e valores. Nomes de clientes são abreviados no servidor. Requer sessão local do proprietário; pareamento exclusivo de aparelho de TV e implantação em rede são etapas futuras. Pode ser exibido pelo computador local conectado à TV.
-
-## Pendências para o MVP completo
-
-- Autenticação é uma porta de demonstração com senha compartilhada e perfil selecionável. Não fornece identidade individual ou controle seguro de contas para produção. Não exponha o servidor à internet.
-- Uma barbearia de demonstração; tenant aplicado às consultas privadas e relações, mas onboarding e isolamento multiempresa completo ainda precisam de testes e implementação.
-- Cadastro de serviços/profissionais é feito pelo seed; interface de edição, recepção, jornadas configuráveis, folgas e bloqueios ainda pendentes. Disponibilidade inicial fixa: todos os dias, 09h–18h.
-- Recebimento integral ao concluir; pagamentos parciais/divididos, descontos, estornos, gorjetas, comissão fixa, adiantamentos e fechamento de caixa físico ainda pendentes.
-- Relatório diário e saldo acumulado; relatórios mensais e exportações ainda pendentes.
-- Consentimento e fila existem; não há integração externa de WhatsApp. Worker marca `simulated`, nunca `delivered`.
-- Cancelamento pelo cliente, remarcação e recuperação de reserva por token ainda pendentes. Hash de token é preparado na reserva.
-- Manifesto e ícone preparados; instalação PWA varia conforme navegador. Sem service worker ou funcionamento offline.
-- Rate limit inicial por telefone para reservas; antiabuso distribuído e limitação de login pendentes.
-
-Veja o plano completo em [PLANO_IMPLEMENTACAO_CLAUDE.md](PLANO_IMPLEMENTACAO_CLAUDE.md) e o andamento em [docs/PROGRESSO.md](docs/PROGRESSO.md). Apesar do nome histórico do arquivo, a implementação atual foi iniciada pelo Codex.
+Limites atuais: onboarding comercial de múltiplas empresas, cobrança de assinatura, homologação real do WhatsApp e instalação em aparelhos físicos ainda não concluídos. A demonstração publicada deve permanecer com dados fictícios.

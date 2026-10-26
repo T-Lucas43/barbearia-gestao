@@ -8,82 +8,132 @@ import {
   MapPin,
   Clock,
   CalendarDays,
+  Link as LinkIcon,
 } from "lucide-react";
-import { money, localDay, time } from "@/lib/domain";
+import { money, localDay } from "@/lib/domain";
+import { addDays } from "@/lib/calendar";
+import InstallAppButton from "./InstallAppButton";
 import type { Professional, Service } from "./types";
+type Slot = {
+  hour: string;
+  professional_id: string;
+  price: number;
+  duration: number;
+};
+type PublicData = {
+  tenant: {
+    name: string;
+    address: string;
+    phone: string;
+    cancellation_minutes: number;
+  };
+  professionals: Professional[];
+  services: Service[];
+  slots: Slot[];
+};
 export default function Booking({
   internal = false,
   onDone,
+  slug = "studio-da-navalha",
+  fixedProfessional,
 }: {
   internal?: boolean;
   onDone?: () => void;
+  slug?: string;
+  fixedProfessional?: string;
 }) {
-  const [data, setData] = useState<{
-    professionals: Professional[];
-    services: Service[];
-    busy: { professional_id: string; starts_at: string; ends_at: string }[];
-  }>();
+  const [data, setData] = useState<PublicData>();
   const [service, setService] = useState("");
-  const [professional, setProfessional] = useState("");
+  const [professional, setProfessional] = useState(fixedProfessional || "");
   const [date, setDate] = useState(localDay());
   const [hour, setHour] = useState("");
   const [step, setStep] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(true);
   const [done, setDone] = useState(false);
+  const [manageLink, setManageLink] = useState("");
+  const [requestKey, setRequestKey] = useState("");
+  const [refresh, setRefresh] = useState(0);
   useEffect(() => {
-    fetch(`/api/public?date=${date}`)
-      .then((r) => r.json())
-      .then(setData)
-      .catch(() => setError("Não foi possível carregar os horários."));
+    if (!date) return;
+    const controller = new AbortController();
     setHour("");
-  }, [date]);
-  const selected = data?.services.find((s) => s.id === service);
-  const pro = data?.professionals.find((p) => p.id === professional);
-  const slots = Array.from(
-    { length: 36 },
-    (_, i) =>
-      `${String(9 + Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`,
-  ).filter((h) => {
-    const start = +new Date(`${date}T${h}:00-03:00`);
-    const end = start + (selected?.duration || 45) * 60000;
-    return (
-      (internal || start > Date.now()) &&
-      end <= +new Date(`${date}T18:00:00-03:00`) &&
-      !data?.busy.some(
-        (b) =>
-          b.professional_id === professional &&
-          start < +new Date(b.ends_at) &&
-          end > +new Date(b.starts_at),
-      )
-    );
-  });
+    setLoadingSlots(true);
+    setError("");
+    fetch(
+      `/api/public?slug=${encodeURIComponent(slug)}&date=${date}&professionalId=${encodeURIComponent(professional)}&serviceId=${encodeURIComponent(service)}`,
+      { signal: controller.signal },
+    )
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) throw Error(d.error);
+        return d;
+      })
+      .then(setData)
+      .catch((e) => {
+        if (e.name !== "AbortError") setError(e.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingSlots(false);
+      });
+    return () => controller.abort();
+  }, [date, professional, service, slug, refresh]);
+  const selectedBase = data?.services.find((s) => s.id === service);
+  const slot = data?.slots.find((s) => s.hour === hour);
+  const selected = selectedBase
+    ? {
+        ...selectedBase,
+        price: slot?.price ?? selectedBase.price,
+        duration: slot?.duration ?? selectedBase.duration,
+      }
+    : undefined;
+  const pro = data?.professionals.find(
+    (p) => p.id === (slot?.professional_id || professional),
+  );
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError("");
     const f = new FormData(event.currentTarget);
+    const key = requestKey || crypto.randomUUID();
+    setRequestKey(key);
     try {
-      const response = await fetch("/api/data", {
+      if (!slot) throw Error("Escolha novamente um horário disponível.");
+      const r = await fetch("/api/data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "book",
+          professionalId: slot.professional_id,
           serviceId: service,
-          professionalId: professional,
-          date,
-          hour,
+          quotedPrice: slot.price,
+          quotedDuration: slot.duration,
           customer: f.get("customer"),
           phone: String(f.get("phone")).replace(/\D/g, ""),
+          date,
+          hour,
           consent: f.get("consent") === "on",
+          internal,
+          slug,
+          idempotencyKey: key,
         }),
       });
-      const result = await response.json();
-      if (!response.ok) throw Error(result.error);
+      const result = await r.json();
+      if (!r.ok) {
+        if (r.status === 409) {
+          setStep(2);
+          setRefresh((n) => n + 1);
+          setRequestKey("");
+        }
+        throw Error(result.error);
+      }
+      setManageLink(`/meu-agendamento/${result.id}#${result.manageToken}`);
       setDone(true);
       if (internal) onDone?.();
     } catch (e) {
       setError((e as Error).message);
+      setRequestKey("");
     } finally {
       setLoading(false);
     }
@@ -98,7 +148,7 @@ export default function Booking({
             </span>
             navalha<span className="brand-dot">.</span>
           </a>
-          <span className="pill">Agendamento online</span>
+          <InstallAppButton />
         </header>
       )}
       <main className="booking-layout">
@@ -108,8 +158,8 @@ export default function Booking({
             <Scissors size={60} strokeWidth={1} />
           </div>
           <h1>
-            Studio da <br />
-            Navalha<span>.</span>
+            {data?.tenant.name || "Sua barbearia"}
+            <span>.</span>
           </h1>
           <p>
             Mais que um corte.
@@ -119,14 +169,14 @@ export default function Booking({
           <div className="shop-meta">
             <span>
               <MapPin size={16} />
-              Barbearia de demonstração
+              {data?.tenant.address || "Consulte o endereço com a recepção"}
             </span>
             <span>
               <Clock size={16} />
-              Todos os dias · 09h às 18h
+              Horários conforme o profissional
             </span>
           </div>
-          <small>Ambiente local · dados fictícios</small>
+          <small>Agendamento e cuidado em um só lugar</small>
         </aside>
         <section className="booking-content">
           {done ? (
@@ -140,18 +190,26 @@ export default function Booking({
                 {selected?.name} com {pro?.name}
               </p>
               <strong>
-                {new Date(`${date}T12:00`).toLocaleDateString("pt-BR")} às{" "}
-                {hour}
+                {date.split("-").reverse().join("/")} às {hour}
               </strong>
               <p>
-                A confirmação aparece na agenda da barbearia. Os lembretes de
-                WhatsApp estão em modo simulado nesta versão.
+                Guarde o link abaixo para consultar, cancelar ou reagendar sua
+                reserva, respeitando a antecedência da barbearia.
+              </p>
+              <a className="primary" href={manageLink}>
+                <LinkIcon size={17} />
+                Gerenciar meu agendamento
+              </a>
+              <p className="form-note">
+                O link é pessoal: qualquer pessoa com acesso pode gerenciar esta
+                reserva. Nenhuma cobrança online é realizada.
               </p>
               <button
-                className="primary"
+                className="text-button"
                 onClick={() => {
                   setDone(false);
                   setStep(0);
+                  setRequestKey("");
                   setHour("");
                 }}
               >
@@ -184,10 +242,10 @@ export default function Booking({
               <p className="muted">
                 {
                   [
-                    "Selecione o serviço para continuar.",
+                    "Selecione o serviço. O preço final aparece antes de confirmar.",
                     "Gente que entende do seu estilo.",
-                    "Os horários abaixo estão disponíveis.",
-                    "Confira seu agendamento e preencha seus dados.",
+                    "Horários calculados pela jornada, intervalos e folgas.",
+                    "Confira o profissional, horário e valor da sua reserva.",
                   ][step]
                 }
               </p>
@@ -198,7 +256,10 @@ export default function Booking({
                     <button
                       key={s.id}
                       className={`choice ${service === s.id ? "selected" : ""}`}
-                      onClick={() => setService(s.id)}
+                      onClick={() => {
+                        setService(s.id);
+                        setRequestKey("");
+                      }}
                     >
                       <span className="choice-icon">
                         <Scissors size={22} />
@@ -208,7 +269,7 @@ export default function Booking({
                         <small>{s.description}</small>
                         <small>
                           <Clock size={12} />
-                          {s.duration} min
+                          {s.duration} min · valor base
                         </small>
                       </span>
                       <b>{money(s.price)}</b>
@@ -221,28 +282,55 @@ export default function Booking({
               )}
               {step === 1 && (
                 <div className="choice-list">
-                  {data?.professionals.map((p) => (
+                  {!fixedProfessional && (
                     <button
-                      key={p.id}
-                      className={`choice ${professional === p.id ? "selected" : ""}`}
-                      onClick={() => setProfessional(p.id)}
+                      className={`choice ${professional === "any" ? "selected" : ""}`}
+                      onClick={() => setProfessional("any")}
                     >
-                      <span className="avatar" style={{ background: p.color }}>
-                        {p.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .slice(0, 2)
-                          .join("")}
+                      <span className="choice-icon">
+                        <Scissors size={22} />
                       </span>
                       <span>
-                        <strong>{p.name}</strong>
-                        <small>{p.specialty}</small>
+                        <strong>Qualquer profissional disponível</strong>
+                        <small>
+                          O profissional e o valor são definidos ao escolher o
+                          horário.
+                        </small>
                       </span>
                       <span className="radio">
-                        {professional === p.id && <Check size={12} />}
+                        {professional === "any" && <Check size={12} />}
                       </span>
                     </button>
-                  ))}
+                  )}
+                  {data?.professionals
+                    .filter(
+                      (p) => !fixedProfessional || p.id === fixedProfessional,
+                    )
+                    .map((p) => (
+                      <button
+                        key={p.id}
+                        className={`choice ${professional === p.id ? "selected" : ""}`}
+                        onClick={() => setProfessional(p.id)}
+                      >
+                        <span
+                          className="avatar"
+                          style={{ background: p.color }}
+                        >
+                          {p.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .slice(0, 2)
+                            .join("")}
+                        </span>
+                        <span>
+                          <strong>{p.name}</strong>
+                          <small>{p.specialty}</small>
+                        </span>
+                        <span className="radio">
+                          {professional === p.id && <Check size={12} />}
+                        </span>
+                      </button>
+                    ))}
                 </div>
               )}
               {step === 2 && (
@@ -253,15 +341,7 @@ export default function Booking({
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        const d = new Date();
-                        d.setDate(d.getDate() + 1);
-                        setDate(
-                          new Intl.DateTimeFormat("en-CA", {
-                            timeZone: "America/Sao_Paulo",
-                          }).format(d),
-                        );
-                      }}
+                      onClick={() => setDate(addDays(localDay(), 1))}
                     >
                       Amanhã
                     </button>
@@ -272,26 +352,39 @@ export default function Booking({
                       type="date"
                       value={date}
                       min={localDay()}
-                      max={new Date(Date.now() + 59 * 86400000)
-                        .toISOString()
-                        .slice(0, 10)}
+                      max={addDays(localDay(), 59)}
+                      onInput={(e) => setDate(e.currentTarget.value)}
                       onChange={(e) => setDate(e.target.value)}
                     />
                   </label>
-                  <div className="slots">
-                    {slots.map((h) => (
-                      <button
-                        className={hour === h ? "selected" : ""}
-                        key={h}
-                        onClick={() => setHour(h)}
-                      >
-                        {h}
-                      </button>
-                    ))}
-                  </div>
-                  {!slots.length && (
-                    <p className="empty">
-                      Sem horários nesta data. Escolha outro dia.
+                  {loadingSlots ? (
+                    <p className="empty" role="status">
+                      Consultando horários…
+                    </p>
+                  ) : (
+                    <>
+                      <div className="slots">
+                        {data?.slots.map((s) => (
+                          <button
+                            key={s.hour}
+                            className={hour === s.hour ? "selected" : ""}
+                            onClick={() => setHour(s.hour)}
+                          >
+                            {s.hour}
+                          </button>
+                        ))}
+                      </div>
+                      {!data?.slots.length && (
+                        <p className="empty">
+                          Sem horários nesta data. Escolha outro dia ou
+                          profissional.
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {slot && (
+                    <p className="form-note">
+                      {pro?.name} · {slot.duration} min · {money(slot.price)}
                     </p>
                   )}
                 </>
@@ -306,7 +399,7 @@ export default function Booking({
                       </strong>
                       <p>
                         {pro?.name} · {date.split("-").reverse().join("/")} às{" "}
-                        {hour}
+                        {hour} · {selected?.duration} min
                       </p>
                     </div>
                   </div>
@@ -326,30 +419,34 @@ export default function Booking({
                     <input
                       name="phone"
                       required
-                      pattern="[0-9() +\-]{10,20}"
                       maxLength={20}
                       placeholder="(11) 99999-9999"
                       type="tel"
                       autoComplete="tel"
+                      pattern="[0-9() +\-]{10,20}"
                     />
                   </label>
                   <label className="consent">
                     <input type="checkbox" name="consent" />
-                    Aceito receber confirmações e lembretes deste agendamento
-                    pelo WhatsApp.
+                    Aceito receber confirmações, alterações e lembretes deste
+                    agendamento pelo WhatsApp.
                   </label>
                   <small className="muted">
-                    Usamos seus dados para organizar o atendimento. Nesta
-                    demonstração, nenhuma mensagem real será enviada.
+                    Usamos seus dados para organizar seu atendimento.
+                    Cancelamentos e reagendamentos online exigem{" "}
+                    {data?.tenant.cancellation_minutes} minutos de antecedência.
                   </small>
-                  <button className="primary wide" disabled={loading}>
+                  <button
+                    className="primary wide"
+                    disabled={loading || loadingSlots}
+                  >
                     {loading ? "Reservando…" : "Confirmar agendamento"}
                     <Check size={18} />
                   </button>
                 </form>
               )}
               {error && (
-                <p role="alert" className="error">
+                <p className="error" role="alert">
                   {error}
                 </p>
               )}
@@ -369,7 +466,11 @@ export default function Booking({
                   <button
                     className="primary"
                     disabled={
-                      step === 0 ? !service : step === 1 ? !professional : !hour
+                      step === 0
+                        ? !service
+                        : step === 1
+                          ? !professional
+                          : !hour || loadingSlots
                     }
                     onClick={() => setStep(step + 1)}
                   >
@@ -384,7 +485,7 @@ export default function Booking({
       </main>
       {!internal && (
         <footer className="booking-footer">
-          Agendamento simples. Cuidado de verdade.{" "}
+          Agendamento simples. Cuidado de verdade.
           <span>feito com navalha.</span>
         </footer>
       )}

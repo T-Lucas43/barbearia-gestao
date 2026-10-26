@@ -2,7 +2,14 @@ node_modules/
 .next/
 .env
 .env.local
+.env.*.local
+release-package/
+*.zip
 *.log
 test-results/
 playwright-report/
 *.tsbuildinfo
+.next-lan/
+backups/
+output/
+tmp/

@@ -1,0 +1,3 @@
+import {readFile} from 'node:fs/promises';import {parse} from 'dotenv';import pg from 'pg';
+const e=parse(await readFile('.env.shard.admin.local'));const url=new URL(e.SHARD_ADMIN_DATABASE_URL);const c=new pg.Client({connectionString:url.href});
+try{await c.connect();const r=(await c.query('SELECT current_user name,rolsuper super FROM pg_roles WHERE rolname=current_user')).rows[0];console.log({proxyRewritesUser:r.name!==decodeURIComponent(url.username),superuser:r.super});const r2=await c.query('SELECT datname FROM pg_database WHERE datname=$1',['navalha_gestao_20261025']);console.log({newDatabaseExists:r2.rowCount===1});}finally{await c.end();}

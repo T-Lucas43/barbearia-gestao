@@ -23,6 +23,8 @@ type TVBooking = {
   status: string;
 };
 type TVData = {
+  mode: "owner" | "device";
+  tenant: { name: string };
   professionals: Professional[];
   appointments: TVBooking[];
   updatedAt: string;
@@ -51,6 +53,23 @@ export default function TV() {
       if (running) return;
       running = true;
       try {
+        const deviceToken = new URLSearchParams(location.hash.slice(1)).get(
+          "device",
+        );
+        if (deviceToken) {
+          const paired = await fetch("/api/tv/pair", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: deviceToken }),
+            signal: controller.signal,
+          });
+          const result = await paired.json();
+          if (!paired.ok) {
+            setAccess(true);
+            throw Error(result.error);
+          }
+          history.replaceState(null, "", location.pathname);
+        }
         const r = await fetch("/api/tv", {
           signal: controller.signal,
           cache: "no-store",
@@ -97,7 +116,9 @@ export default function TV() {
             </span>
             navalha<span className="brand-dot">.</span>
           </a>
-          <span className="tv-shop">STUDIO DA NAVALHA</span>
+          <span className="tv-shop">
+            {data?.tenant.name.toUpperCase() || "SUA BARBEARIA"}
+          </span>
         </div>
         <div className="tv-clock">
           <strong>
@@ -287,10 +308,12 @@ export default function TV() {
         </span>
         <span>Nomes abreviados para preservar sua privacidade.</span>
         <div>
-          <a href="/">
-            <ArrowLeft size={16} />
-            Painel
-          </a>
+          {data?.mode !== "device" && (
+            <a href="/">
+              <ArrowLeft size={16} />
+              Painel
+            </a>
+          )}
           <button
             onClick={async () => {
               try {
