@@ -87,3 +87,11 @@ Não realizados: instalação física PWA, pareamento físico de TV, envio real 
 A checagem inicial de API passou, mas o HTML ainda referenciava bundles antigos por causa de build/server/route-cache persistente. Corrigido no empacotador: arquiva cache por mudança de release antes de iniciar. Pacote final SHA256 7ec8fd3d2e9d0b63a5db2ea9cd139bafa10374784b21199ef321b0e3660ad29b.
 
 Após aplicar: modo inspect da checagem pública confirmou os bundles novos; navegador mostrou os dois botões e login profissional abriu Cortes com somente as cinco seções próprias. Evidências: publicado-dois-perfis.png e publicado-profissional.png.
+
+## Elares Barber — validação local
+
+- 24 testes aprovados: inclui janela de dez minutos, deduplicação por versão, isolamento, autorização de contato, solicitação única, confirmação manual, duas pessoas disputando o preparo, lembrete já enviado e remarcação.
+- Redirecionamentos wa.me inspecionados com redirect manual; nenhum acesso ao WhatsApp ou envio externo executado.
+- Formulário HTML nativo testado no navegador com UUID inexistente: passou pela origem/autenticação e retornou página Elares de agendamento não encontrado, sem redirecionar. Fixture removida.
+- Interface local em 390 px: sino visível, prévia identificada como exemplo, solicitação do barbeiro e fila recebida pelo gestor. Registro de envio desabilitado até confirmação.
+- Marca SVG reaproveita a identidade original fornecida da Elares; PNGs de instalação renderizados do vetor, incluindo variante maskable.

@@ -784,12 +784,157 @@ test("lembretes manuais usam agenda atual e isolam telefone por profissional", a
     (await get("/api/reminders?professionalId=" + other.id)).appointments,
     [],
   );
+  const task = { appointmentId: ids[0], version: 0 };
+  const openChat = (session = cookie, version = 0) =>
+    fetch(base + "/api/reminders/open", {
+      method: "POST",
+      redirect: "manual",
+      headers: { Origin: base, Cookie: session },
+      body: new URLSearchParams({
+        appointmentId: ids[0],
+        version: String(version),
+        message: "Olá! Lembrete fictício de teste.",
+      }),
+    });
+  assert.equal((await openChat("")).status, 401);
+  assert.equal((await openChat(barber)).status, 403);
+  assert.equal(
+    (await post("/api/reminders", { action: "request", ...task }, "")).status,
+    401,
+  );
+  assert.equal(
+    (
+      await post(
+        "/api/reminders",
+        { action: "request", appointmentId: ids[1], version: 0 },
+        barber,
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (
+      await post(
+        "/api/reminders",
+        { action: "request", appointmentId: ids[2], version: 0 },
+        barber,
+      )
+    ).status,
+    409,
+  );
+  await ok("/api/reminders", { action: "request", ...task }, barber);
+  await ok("/api/reminders", { action: "request", ...task }, barber);
+  assert.equal(
+    (
+      await db.query(
+        "SELECT id FROM manual_reminder_tasks WHERE appointment_id=$1",
+        [ids[0]],
+      )
+    ).rowCount,
+    1,
+  );
+  const chat = await openChat();
+  assert.equal(chat.status, 303);
+  const destination = new URL(chat.headers.get("location")!);
+  assert.equal(destination.origin, "https://wa.me");
+  assert.equal(
+    destination.searchParams.get("text"),
+    "Olá! Lembrete fictício de teste.",
+  );
+  const receptionEmail = "central-" + email;
+  await ok("/api/settings", {
+    action: "user_create",
+    name: "Recepção Central QA",
+    email: receptionEmail,
+    password,
+    role: "receptionist",
+    professionalId: null,
+  });
+  const reception = await login(receptionEmail);
+  const duplicate = await openChat(reception);
+  assert.equal(duplicate.status, 409);
+  assert.equal(duplicate.headers.get("location"), null);
+  assert.match(await duplicate.text(), /Outra pessoa da equipe/);
+  assert.ok(
+    (await get("/api/notices")).items.some(
+      (n: { kind: string }) => n.kind === "central",
+    ),
+  );
+  assert.equal(
+    (
+      await post(
+        "/api/reminders",
+        { action: "done", confirmed: true, ...task },
+        barber,
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (await post("/api/reminders", { action: "done", ...task }, cookie)).status,
+    400,
+  );
+  const opened = await ok("/api/reminders", { action: "opened", ...task });
+  assert.equal(opened.state, "opened");
+  assert.equal(opened.done_at, null);
+  const finished = await ok("/api/reminders", {
+    action: "done",
+    confirmed: true,
+    ...task,
+  });
+  assert.equal(finished.state, "done");
+  const repeated = await openChat();
+  assert.equal(repeated.status, 409);
+  assert.equal(repeated.headers.get("location"), null);
+  assert.equal(
+    (await ok("/api/reminders", { action: "opened", ...task })).state,
+    "done",
+  );
+  await ok("/api/reminders", { action: "reopen", ...task });
+  const nearIds: string[] = [];
+  for (const pid of [p, pro])
+    nearIds.push(
+      (
+        await db.query(
+          "INSERT INTO appointments(tenant_id,professional_id,service_id,customer,phone,starts_at,ends_at,price,list_price,commission_bps,commission,manage_hash,consent) VALUES($1,$2,$3,'Próximo corte QA','11900000002',now()+interval '7 minutes',now()+interval '37 minutes',5000,5000,6000,3000,$4,true) RETURNING id",
+          [tenant, pid, service, randomUUID()],
+        )
+      ).rows[0].id,
+    );
+  assert.equal((await fetch(base + "/api/notices")).status, 401);
+  const ownNotices = await get("/api/notices", barber);
+  assert.deepEqual(
+    ownNotices.items
+      .filter((n: { kind: string }) => n.kind === "cut")
+      .map((n: { appointmentId: string }) => n.appointmentId),
+    [nearIds[0]],
+  );
+  assert.ok(
+    ownNotices.items.some(
+      (n: { kind: string; appointmentId: string }) =>
+        n.kind === "reminder" && n.appointmentId === nearIds[0],
+    ),
+  );
+  assert.equal(JSON.stringify(ownNotices).includes("11900000002"), false);
   await db.query(
     "UPDATE appointments SET starts_at=starts_at+interval '30 days',ends_at=ends_at+interval '30 days',schedule_version=schedule_version+1 WHERE id=$1",
     [ids[0]],
   );
   const changed = await get("/api/reminders", barber);
   assert.ok(!changed.appointments.some((a: { id: string }) => a.id === ids[0]));
+  assert.equal(
+    (
+      await post(
+        "/api/reminders",
+        { action: "done", confirmed: true, ...task },
+        cookie,
+      )
+    ).status,
+    409,
+  );
+  const staleChat = await openChat();
+  assert.equal(staleChat.status, 409);
+  assert.equal(staleChat.headers.get("location"), null);
   assert.equal(
     (
       await db.query(

@@ -34,6 +34,8 @@ export type Appointment = {
   list_price?: number;
   discount?: number;
   source?: "booking" | "walk_in";
+  consent?: boolean;
+  schedule_version?: number;
 };
 export type Data = {
   role: string;

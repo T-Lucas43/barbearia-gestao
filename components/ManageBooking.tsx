@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Scissors, CalendarDays, Check, ArrowLeft } from "lucide-react";
 import { money, time, localDay } from "@/lib/domain";
+import Brand from "./Brand";
 type Reservation = {
   id: string;
   customer: string;
@@ -92,10 +93,7 @@ export default function ManageBooking({ id }: { id: string }) {
     <main className="manage-page">
       <header className="booking-header">
         <a href="/" className="brand">
-          <span className="brand-icon">
-            <Scissors />
-          </span>
-          navalha.
+          <Brand />
         </a>
         <span className="pill">Minha reserva</span>
       </header>

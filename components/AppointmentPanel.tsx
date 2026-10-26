@@ -91,7 +91,9 @@ export default function AppointmentPanel({
   const canReceive = a && !["cancelled", "no_show"].includes(a.status);
   return (
     <div className="appointment-detail">
-      <span className="eyebrow">{a?.source === "walk_in" ? "CORTE AVULSO" : "ATENDIMENTO"}</span>
+      <span className="eyebrow">
+        {a?.source === "walk_in" ? "CORTE AVULSO" : "ATENDIMENTO"}
+      </span>
       <h2>{a?.customer || "Carregando…"}</h2>
       {error && (
         <p className="error" role="alert">

@@ -12,6 +12,7 @@ import {
 import { appointmentDay } from "@/lib/calendar";
 import { time } from "@/lib/domain";
 import { professionalQueue } from "@/lib/tv";
+import Brand from "./Brand";
 import type { Professional } from "./types";
 type TVBooking = {
   id: string;
@@ -111,10 +112,7 @@ export default function TV() {
       <header className="tv-header">
         <div>
           <a href="/" className="brand">
-            <span className="brand-icon">
-              <Scissors size={25} />
-            </span>
-            navalha<span className="brand-dot">.</span>
+            <Brand light />
           </a>
           <span className="tv-shop">
             {data?.tenant.name.toUpperCase() || "SUA BARBEARIA"}

@@ -137,6 +137,11 @@ export async function seedDemo() {
             if ((e as { code?: string }).code !== "23P01") throw e;
           }
         }
+    // Opt-in examples belong only to generated fictional records. Real bookings
+    // have no demo_reference and their consent is never changed by this seed.
+    await c.query(
+      "UPDATE appointments SET consent=true WHERE tenant_id='demo' AND demo_reference LIKE 'demo-v1:%' AND phone ~ '^1190000[0-9]{4}$' AND (starts_at AT TIME ZONE 'America/Sao_Paulo')::time='09:00'",
+    );
     for (const offset of [-12, -8, -4]) {
       const date = addDays(today, offset);
       const ref = "expense-demo-v1:" + date;

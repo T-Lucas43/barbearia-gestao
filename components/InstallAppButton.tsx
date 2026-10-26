@@ -79,8 +79,8 @@ export default function InstallAppButton() {
           <ol>
             <li>Abra o sistema no Chrome ou Edge.</li>
             <li>
-              No menu do navegador, escolha “Instalar Navalha” ou “Adicionar à
-              tela inicial”.
+              No menu do navegador, escolha “Instalar Elares Barber” ou
+              “Adicionar à tela inicial”.
             </li>
             <li>Confirme a instalação no seu aparelho.</li>
           </ol>

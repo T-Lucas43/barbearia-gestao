@@ -39,3 +39,11 @@ Publicação da atualização concluída em https://navalha-gestao.shardweb.app/
 Envio manual sem API: lista da agenda futura por período, acesso individual por profissional, mensagem editável com cliente/serviço/barbeiro/data/hora e link wa.me com número brasileiro normalizado. Sem disparo automático ou confirmação de envio/entrega. Sem autorização de contato, atalho indisponível. Cortes avulsos e atendimentos cancelados/concluídos não aparecem. Histórico da integração automática preservado em área recolhida; integração real continua opcional e desligada na demonstração.
 
 22 testes locais passaram, incluindo isolamento, reagendamento, ausência de dependência da fila e formato seguro do link. Não foi aberta conversa nem enviada mensagem externa na validação.
+
+## Elares Barber e central compartilhada — 26/10/2026
+
+Marca derivada dos vetores originais da Elares, com laranja solar, grafite e interface clara. Logo SVG, ícones PWA, tela de entrada, área do profissional, TV e relatórios atualizados. Próximo corte futuro em destaque; horários vencidos ficam em área separada.
+
+Avisos dentro do app para cortes a dez minutos e lembretes pendentes. Barbeiro solicita à central; gestor/recepção prepara a conversa usando o único WhatsApp da barbearia. Validação de origem, permissões, consentimento e versão antes de redirecionar; reserva temporária por funcionário e confirmação manual de envio.
+
+24 testes locais e typecheck passaram. Formulário nativo conferido no navegador com destinatário inexistente, sem sair do sistema. Nenhuma conversa externa foi aberta na validação. Veja LEMBRETES_E_AVISOS.md para o fluxo e seus limites. Publicação desta versão em preparação.

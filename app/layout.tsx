@@ -1,18 +1,23 @@
 import type { Metadata } from "next";
 import type { Viewport } from "next";
 import "./globals.css";
+import "./elares.css";
 import PageScrollReset from "@/components/PageScrollReset";
 export const metadata: Metadata = {
-  title: "Navalha — Gestão de barbearias",
+  title: "Elares Barber — Gestão de barbearias",
   description: "Sua agenda organizada. Seu negócio em boas mãos.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "Navalha", statusBarStyle: "default" },
-  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: {
+    capable: true,
+    title: "Elares Barber",
+    statusBarStyle: "default",
+  },
+  icons: { icon: "/icons/elares-192.png", apple: "/icons/elares-180.png" },
 };
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#193f34",
+  themeColor: "#101317",
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

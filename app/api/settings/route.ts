@@ -57,7 +57,7 @@ export async function GET() {
         services: services.rows,
         schedules: schedules.rows,
         blocks: blocks.rows,
-        users: s.is_demo?[]:users.rows,
+        users: s.is_demo ? [] : users.rows,
         devices: devices.rows,
         rules: rules.rows,
         self: s.user_id,
@@ -77,7 +77,11 @@ export async function POST(request: Request) {
     requireOrigin(request);
     const s = await requireSession(["owner"], true);
     const body = await request.json();
-    if(s.is_demo && String(body.action).startsWith('user_'))throw new HttpError('As contas da demonstração são fixas. Use uma conta administrativa para gerenciar acessos.',403);
+    if (s.is_demo && String(body.action).startsWith("user_"))
+      throw new HttpError(
+        "As contas da demonstração são fixas. Use uma conta administrativa para gerenciar acessos.",
+        403,
+      );
     if (body.action === "user_create") {
       const d = z
         .object({

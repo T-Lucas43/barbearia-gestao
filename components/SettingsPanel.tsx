@@ -294,7 +294,7 @@ export default function SettingsPanel({
                 value={data.tenant.address}
               />
               <Field
-                label="Telefone público"
+                label="WhatsApp da barbearia (com DDD)"
                 name="phone"
                 value={data.tenant.phone}
               />
@@ -307,7 +307,7 @@ export default function SettingsPanel({
                 max={10080}
               />
               <Field
-                label="Enviar lembrete antes do horário (min)"
+                label="Mostrar aviso de lembrete (min antes)"
                 name="remind"
                 value={data.tenant.reminder_minutes}
                 type="number"
@@ -934,36 +934,93 @@ export default function SettingsPanel({
         )}
         {section === "whatsapp" && (
           <>
-            <h2>WhatsApp Business Cloud API</h2>
-            <span className="pill">
-              {data.whatsapp.enabled
-                ? "Envio real habilitado no servidor"
-                : "Modo simulado"}
-            </span>
+            <h2>Um WhatsApp para a barbearia</h2>
             <p className="muted">
-              Confirmação, lembrete, cancelamento e reagendamento usam modelos
-              aprovados na Meta. Credenciais ficam somente no servidor.
+              Os profissionais solicitam o lembrete. O gestor ou a recepção abre
+              a mensagem pronta e envia usando o WhatsApp da barbearia.
             </p>
-            <div className="integration-note">
-              <h3>
-                {data.whatsapp.missing.length
-                  ? "Configuração necessária"
-                  : "Credenciais preenchidas"}
-              </h3>
-              <p>
-                Para ativar o envio real, configure o provedor na conta da Meta,
-                aprove os modelos e preencha o arquivo de ambiente do servidor.
-                Nenhuma mensagem é enviada apenas por abrir esta tela.
+            <form
+              key={"wa" + nonce}
+              onSubmit={form("tenant", (f) => ({
+                name: data.tenant.name,
+                slug: data.tenant.slug,
+                address: data.tenant.address,
+                phone: f.get("phone"),
+                cancellationMinutes: data.tenant.cancellation_minutes,
+                reminderMinutes: num(f, "remind"),
+              }))}
+            >
+              <div className="form-grid">
+                <Field
+                  label="WhatsApp da barbearia (com DDD)"
+                  name="phone"
+                  value={data.tenant.phone}
+                />
+                <Field
+                  label="Mostrar aviso de lembrete (min antes)"
+                  name="remind"
+                  value={data.tenant.reminder_minutes}
+                  type="number"
+                  min={15}
+                  max={10080}
+                />
+              </div>
+              <p className="form-note">
+                Conecte a conta da barbearia no WhatsApp deste dispositivo. O
+                atalho não escolhe o número que envia: ele utiliza a conta
+                conectada. O envio depende de um toque em enviar no WhatsApp.
               </p>
-              {data.whatsapp.missing.map((key) => (
-                <code key={key}>{key}</code>
-              ))}
+              <button className="primary" disabled={readOnly || busy}>
+                <Save size={16} />
+                Salvar configuração
+              </button>
+            </form>
+            <div className="whatsapp-workflow">
+              <p>
+                <strong>1. O cliente agenda</strong> e autoriza o contato.
+              </p>
+              <p>
+                <strong>2. O barbeiro recebe o aviso</strong> e pode solicitar à
+                recepção.
+              </p>
+              <p>
+                <strong>3. A equipe envia</strong> pelo número da barbearia e
+                informa o envio na central.
+              </p>
             </div>
-            <p className="form-note">
-              Webhook: /api/webhooks/whatsapp · assinatura HMAC validada ·
-              estados desconhecidos exigem conciliação antes de reenviar. Veja
-              docs/WHATSAPP.md.
-            </p>
+            <details className="automatic-notifications">
+              <summary>Integração automática opcional</summary>
+              <span className="pill">
+                {data.whatsapp.enabled
+                  ? "Envio real habilitado no servidor"
+                  : "Modo simulado"}
+              </span>
+              <p className="muted">
+                Confirmação, lembrete, cancelamento e reagendamento usam modelos
+                aprovados na Meta. Credenciais ficam somente no servidor.
+              </p>
+              <div className="integration-note">
+                <h3>
+                  {data.whatsapp.missing.length
+                    ? "Configuração necessária"
+                    : "Credenciais preenchidas"}
+                </h3>
+                <p>
+                  Para ativar o envio real, configure o provedor na conta da
+                  Meta, aprove os modelos e preencha o arquivo de ambiente do
+                  servidor. Nenhuma mensagem é enviada apenas por abrir esta
+                  tela.
+                </p>
+                {data.whatsapp.missing.map((key) => (
+                  <code key={key}>{key}</code>
+                ))}
+              </div>
+              <p className="form-note">
+                Webhook: /api/webhooks/whatsapp · assinatura HMAC validada ·
+                estados desconhecidos exigem conciliação antes de reenviar. Veja
+                docs/WHATSAPP.md.
+              </p>
+            </details>
           </>
         )}
         {section === "tv" && (

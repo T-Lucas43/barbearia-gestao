@@ -47,6 +47,8 @@ import InstallAppButton from "./InstallAppButton";
 import WalkInForm from "./WalkInForm";
 import CutsPanel from "./CutsPanel";
 import ProfessionalSettings from "./ProfessionalSettings";
+import Brand from "./Brand";
+import InAppNotifications from "./InAppNotifications";
 const tabs: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "overview", label: "Visão geral", icon: LayoutDashboard },
   { id: "cuts", label: "Cortes", icon: Scissors },
@@ -244,6 +246,7 @@ export default function Dashboard() {
       if (!r.ok) throw Error("Demonstração indisponível no momento.");
       await load();
       setTab(profile === "barber" ? "cuts" : "overview");
+      setMenu(false);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -272,10 +275,7 @@ export default function Dashboard() {
       <main className="login-page">
         <div className="login-story">
           <div className="brand">
-            <span className="brand-icon">
-              <Scissors />
-            </span>
-            navalha.
+            <Brand light />
           </div>
           <span className="eyebrow light">MAIS TEMPO PARA O QUE IMPORTA</span>
           <h1>
@@ -300,7 +300,7 @@ export default function Dashboard() {
         </div>
         <section className="login-box">
           <InstallAppButton />
-          <span className="eyebrow">BEM-VINDO À NAVALHA</span>
+          <span className="eyebrow">BEM-VINDO AO ELARES BARBER</span>
           <h2>Seu dia começa aqui.</h2>
           <p className="muted">Entre com sua conta da barbearia.</p>
           <form onSubmit={enter}>
@@ -311,7 +311,7 @@ export default function Dashboard() {
                 type="email"
                 autoComplete="username"
                 required
-                defaultValue="dono@navalha.local"
+                placeholder="voce@barbearia.com"
               />
             </label>
             <label className="field">
@@ -441,10 +441,7 @@ export default function Dashboard() {
           <X size={21} />
         </button>
         <a href="/" className="brand">
-          <span className="brand-icon">
-            <Scissors size={23} />
-          </span>
-          navalha<span className="brand-dot">.</span>
+          <Brand light />
         </a>
         <div className="workspace">
           <span className="workspace-icon">SN</span>
@@ -466,7 +463,7 @@ export default function Dashboard() {
                     "settings",
                   ].includes(t.id)
                 : data.role === "receptionist"
-                  ? !["cuts", "team", "messages", "settings"].includes(t.id)
+                  ? !["cuts", "team", "settings"].includes(t.id)
                   : true,
             )
             .map((t) => (
@@ -504,6 +501,7 @@ export default function Dashboard() {
             onClick={async () => {
               await fetch("/api/session", { method: "DELETE" });
               setData(undefined);
+              setMenu(false);
               setLogin(true);
             }}
           >
@@ -514,6 +512,7 @@ export default function Dashboard() {
             <span className="avatar small">
               {data.name
                 .split(/\s+/)
+                .filter((word) => /[A-Za-zÀ-ú]/.test(word))
                 .slice(0, 2)
                 .map((part) => part[0])
                 .join("")}
@@ -545,6 +544,7 @@ export default function Dashboard() {
             >
               <Menu size={22} />
             </button>
+            <Brand compact />
             <span>Meu espaço</span>
             <ChevronRight size={14} />
             <strong>{tabs.find((t) => t.id === tab)?.label}</strong>
@@ -568,16 +568,18 @@ export default function Dashboard() {
                 ? "Demonstração"
                 : "Seu espaço"}
             </span>
-            <button
-              className="icon-button"
-              aria-label="Ver lembretes"
-              onClick={() => setTab("messages")}
-            >
-              <Bell size={20} />
-            </button>
+            <InAppNotifications
+              data={data}
+              activeTab={tab}
+              suspended={menu || !!modal || !!detail}
+              onOpenAppointment={(id) => setDetail({ id } as Appointment)}
+              onOpenReminders={() => setTab("messages")}
+              onOpenCuts={() => setTab("cuts")}
+            />
             <span className="avatar small">
               {data.name
                 .split(/\s+/)
+                .filter((word) => /[A-Za-zÀ-ú]/.test(word))
                 .slice(0, 2)
                 .map((part) => part[0])
                 .join("")}
@@ -586,14 +588,14 @@ export default function Dashboard() {
         </header>
         <main className="content">
           {(data.readOnly || data.isDemo) && (
-            <div className="demo-banner">
-              <strong>Demonstração · dados fictícios</strong>
-              <span>
+            <details className="demo-banner demo-notice">
+              <summary>Demonstração compartilhada · dados fictícios</summary>
+              <p>
                 {data.readOnly
                   ? "Esta conta permite somente consulta."
                   : "Você pode testar os lançamentos. Use somente dados fictícios; a demonstração é compartilhada."}
-              </span>
-            </div>
+              </p>
+            </details>
           )}
           <div className="page-heading">
             <div>
@@ -601,7 +603,7 @@ export default function Dashboard() {
               <h1>{pageCopy[tab]?.[0]}</h1>
               <p>{pageCopy[tab]?.[1]}</p>
             </div>
-            {tab !== "cuts" && (
+            {["overview", "agenda"].includes(tab) && (
               <div className="page-actions">
                 <button
                   className="secondary"
@@ -623,34 +625,36 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-          <div className="toolbar">
-            <div className="date-control">
-              <button aria-label="Dia anterior" onClick={() => shift(-1)}>
-                <ChevronLeft size={17} />
+          {["overview", "agenda", "team"].includes(tab) && (
+            <div className="toolbar">
+              <div className="date-control">
+                <button aria-label="Dia anterior" onClick={() => shift(-1)}>
+                  <ChevronLeft size={17} />
+                </button>
+                <CalendarDays size={17} />
+                <input
+                  aria-label="Data selecionada"
+                  type="date"
+                  value={day}
+                  onChange={(e) => setDay(e.target.value)}
+                />
+                <button aria-label="Próximo dia" onClick={() => shift(1)}>
+                  <ChevronRight size={17} />
+                </button>
+              </div>
+              <span className="date-label">{dateText}</span>
+              <button
+                className="text-button today"
+                onClick={() => setDay(localDay())}
+              >
+                Hoje
               </button>
-              <CalendarDays size={17} />
-              <input
-                aria-label="Data selecionada"
-                type="date"
-                value={day}
-                onChange={(e) => setDay(e.target.value)}
-              />
-              <button aria-label="Próximo dia" onClick={() => shift(1)}>
-                <ChevronRight size={17} />
+              <button className="secondary share" onClick={copy}>
+                <LinkIcon size={16} />
+                Link de agendamento
               </button>
             </div>
-            <span className="date-label">{dateText}</span>
-            <button
-              className="text-button today"
-              onClick={() => setDay(localDay())}
-            >
-              Hoje
-            </button>
-            <button className="secondary share" onClick={copy}>
-              <LinkIcon size={16} />
-              Link de agendamento
-            </button>
-          </div>
+          )}
           {tab === "overview" && data.role !== "receptionist" && (
             <div className="stats">
               <Stat
@@ -1016,6 +1020,7 @@ export default function Dashboard() {
               onSelect={setDetail}
               onWalkIn={() => setModal("walk_in")}
               onBooking={() => setModal("booking")}
+              onReminders={() => setTab("messages")}
             />
           )}
           {tab === "finance" && (
@@ -1052,13 +1057,13 @@ export default function Dashboard() {
           )}
           <footer className="app-footer">
             <span>
-              navalha<span className="brand-dot">.</span>{" "}
-              <small>Menos gestão. Mais cuidado.</small>
+              <strong>Elares Barber</strong>{" "}
+              <small>Seu talento. Nossa tecnologia.</small>
             </span>
             <small>
               {process.env.NEXT_PUBLIC_DEMO_MODE === "true"
                 ? "Demonstração"
-                : "Navalha"}{" "}
+                : "Elares Barber"}{" "}
               ·{" "}
               {data.whatsappEnabled
                 ? "WhatsApp habilitado"
@@ -1073,8 +1078,8 @@ export default function Dashboard() {
             (data.role === "barber"
               ? ["cuts", "agenda", "finance", "messages", "settings"]
               : data.role === "receptionist"
-                ? ["overview", "agenda", "finance", "services", "account"]
-                : ["overview", "cuts", "agenda", "team", "finance"]
+                ? ["overview", "agenda", "messages", "finance", "account"]
+                : ["overview", "cuts", "agenda", "messages", "finance"]
             ).includes(t.id),
           )
           .map((t) => (

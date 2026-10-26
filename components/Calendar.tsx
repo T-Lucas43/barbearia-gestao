@@ -97,7 +97,12 @@ export default function Calendar({
         {time(a.starts_at)}–{time(a.ends_at)}
       </span>
       <strong>{a.customer}</strong>
-      <span>{a.service_name}{a.source === "walk_in" && <small className="walk-in-badge">Avulso</small>}</span>
+      <span>
+        {a.service_name}
+        {a.source === "walk_in" && (
+          <small className="walk-in-badge">Avulso</small>
+        )}
+      </span>
       <small>
         {a.professional_name} · {money(a.price)}
       </small>

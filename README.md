@@ -1,4 +1,4 @@
-# Navalha — gestão de barbearias
+# Elares Barber — Gestão de barbearias
 
 Aplicação mobile first em Next.js/TypeScript e PostgreSQL. Marca, clientes e movimentações da demonstração são fictícios.
 

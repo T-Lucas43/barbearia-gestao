@@ -8,6 +8,12 @@ export type ManualReminder = {
   starts_at: string;
   consent: boolean;
   due: boolean;
+  schedule_version: number;
+  reminder_state: "pending" | "opened" | "done" | null;
+  requested_at: string | null;
+  requested_by_name?: string | null;
+  opened_at: string | null;
+  done_at: string | null;
 };
 
 // Booking currently collects Brazilian numbers with DDD. Never guess another

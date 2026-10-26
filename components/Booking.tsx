@@ -13,6 +13,7 @@ import {
 import { money, localDay } from "@/lib/domain";
 import { addDays } from "@/lib/calendar";
 import InstallAppButton from "./InstallAppButton";
+import Brand from "./Brand";
 import type { Professional, Service } from "./types";
 type Slot = {
   hour: string;
@@ -151,10 +152,7 @@ export default function Booking({
       {!internal && (
         <header className="booking-header">
           <a className="brand" href="/">
-            <span className="brand-icon">
-              <Scissors size={22} />
-            </span>
-            navalha<span className="brand-dot">.</span>
+            <Brand />
           </a>
           <InstallAppButton />
         </header>
@@ -501,7 +499,7 @@ export default function Booking({
       {!internal && (
         <footer className="booking-footer">
           Agendamento simples. Cuidado de verdade.
-          <span>feito com navalha.</span>
+          <span>feito com Elares Barber</span>
         </footer>
       )}
     </div>

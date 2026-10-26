@@ -61,7 +61,7 @@ export async function financialPDF(input: PDFReport): Promise<Buffer> {
       Title: `Relatório financeiro - ${input.shop.name}`,
       Author: input.shop.name,
       Subject: "Gestão de barbearias",
-      Creator: "Navalha",
+      Creator: "Elares Barber",
     },
   });
   const chunks: Buffer[] = [];
@@ -74,11 +74,11 @@ export async function financialPDF(input: PDFReport): Promise<Buffer> {
     H = doc.page.height,
     left = 40,
     width = W - 80;
-  const green = "#193F34",
-    gold = "#BEA16B",
-    ink = "#253B34",
-    muted = "#75836B",
-    line = "#E5EADB";
+  const green = "#171B21",
+    gold = "#F06432",
+    ink = "#202630",
+    muted = "#677589",
+    line = "#E5E9EF";
   let y = 0;
   const fmt = (value: number) => money(value).replace(/\u00a0/g, " ");
   const date = (value: string) =>
@@ -104,7 +104,7 @@ export async function financialPDF(input: PDFReport): Promise<Buffer> {
   function header(first = false) {
     doc.rect(0, 0, W, first ? 140 : 66).fill(green);
     text(
-      "navalha.",
+      "Elares Barber",
       left,
       first ? 28 : 20,
       { width: 180 },
@@ -190,7 +190,15 @@ export async function financialPDF(input: PDFReport): Promise<Buffer> {
       y += height;
     };
     doc.font("Helvetica").fontSize(8);
-    const firstHeight = rows[0] ? Math.max(30, ...rows[0].map((cell, i) => doc.heightOfString(cell, {width:sizes[i]-12})+14)) : 0;
+    const firstHeight = rows[0]
+      ? Math.max(
+          30,
+          ...rows[0].map(
+            (cell, i) =>
+              doc.heightOfString(cell, { width: sizes[i] - 12 }) + 14,
+          ),
+        )
+      : 0;
     ensure(30 + firstHeight + 30);
     heading();
     rows.forEach((row, index) => {
