@@ -44,3 +44,10 @@ Instalação em aparelho físico, pareamento de Smart TV e entrega real de Whats
 ## Cache entre atualizações
 
 Next 16.4 usa build/server/route-cache com identidades de rota estáveis. Como o upload mescla diretórios, o pacote agora arquiva esse cache gerado em .cache/navalha-previous-caches quando release.json muda, antes de iniciar Next. O banco é preservado. A checagem pública também verifica os bundles referenciados pelo HTML, pois health novo isoladamente não comprova a interface nova.
+
+
+## Atualização Elares Barber — 26/10/2026
+
+Fonte publicada: 93f27830a18a64d771669712270c1ac815886d97. Artefato elares-barber-node.zip, SHA256 377399eb8dbd605c2539899a59140f8d6fe6280705e4bdc2accbde80adbd4eec. CI aprovada, 24 testes e build Linux. Migração aditiva 008_central_lembretes aplicada na inicialização; central manual disponível com integração externa desativada.
+
+A checagem pública de leitura scripts/qa-elares.mjs confirmou banco, perfis, isolamento, PDFs, assets e interface da nova release. Não cria reservas nem acessa o WhatsApp. A prova visual inclui área profissional, prévia do pop-up, central e TV. O hostname navalha-gestao.shardweb.app foi preservado; a marca exibida agora é Elares Barber.

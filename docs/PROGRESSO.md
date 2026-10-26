@@ -46,4 +46,4 @@ Marca derivada dos vetores originais da Elares, com laranja solar, grafite e int
 
 Avisos dentro do app para cortes a dez minutos e lembretes pendentes. Barbeiro solicita à central; gestor/recepção prepara a conversa usando o único WhatsApp da barbearia. Validação de origem, permissões, consentimento e versão antes de redirecionar; reserva temporária por funcionário e confirmação manual de envio.
 
-24 testes locais e typecheck passaram. Formulário nativo conferido no navegador com destinatário inexistente, sem sair do sistema. Nenhuma conversa externa foi aberta na validação. Veja LEMBRETES_E_AVISOS.md para o fluxo e seus limites. Publicação desta versão em preparação.
+24 testes locais e typecheck passaram. Formulário nativo conferido no navegador com destinatário inexistente, sem sair do sistema. Nenhuma conversa externa foi aberta na validação. Veja LEMBRETES_E_AVISOS.md para o fluxo e seus limites. Publicação concluída na fonte 93f27830a18a64d771669712270c1ac815886d97, com CI aprovada e conferência pública da interface, perfis, PostgreSQL e PDFs. O endereço existente foi preservado para manter os links compartilhados.

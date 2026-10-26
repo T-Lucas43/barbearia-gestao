@@ -95,3 +95,13 @@ Após aplicar: modo inspect da checagem pública confirmou os bundles novos; nav
 - Formulário HTML nativo testado no navegador com UUID inexistente: passou pela origem/autenticação e retornou página Elares de agendamento não encontrado, sem redirecionar. Fixture removida.
 - Interface local em 390 px: sino visível, prévia identificada como exemplo, solicitação do barbeiro e fila recebida pelo gestor. Registro de envio desabilitado até confirmação.
 - Marca SVG reaproveita a identidade original fornecida da Elares; PNGs de instalação renderizados do vetor, incluindo variante maskable.
+
+
+## Elares Barber — publicação verificada em 26/10/2026
+
+- Fonte pública 93f27830a18a64d771669712270c1ac815886d97; CI aprovada (run 40386102628), typecheck, 24 testes e build Linux concluídos.
+- Pacote elares-barber-node.zip: SHA256 377399eb8dbd605c2539899a59140f8d6fe6280705e4bdc2accbde80adbd4eec.
+- scripts/qa-elares.mjs confirmou SHA, banco pronto/PostgreSQL, título e bundles novos, logos/manifest, login dos dois perfis, 401/403, isolamento do profissional, consulta de avisos/lembretes e exportação PDF dos dois perfis. Validação pública sem criar agendamentos ou enviar mensagens.
+- Navegador público: área profissional e central sem overflow horizontal em 320 px; pop-up de exemplo conferido em 390 px; confirmação de envio desabilitada antes do checkbox.
+- TV publicada com três profissionais: 1280×720 e 1366×768 sem rolagem horizontal ou vertical. Nenhum atendimento estava em andamento no momento.
+- Evidências em docs/evidencias/elares-publicado-*.png. A prévia de pop-up é identificada como exemplo; a lógica da janela real foi validada por teste. Instalação física, entrega de WhatsApp e notificações com app fechado não foram executadas.
