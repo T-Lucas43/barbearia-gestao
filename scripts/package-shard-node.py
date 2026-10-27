@@ -52,7 +52,7 @@ if(!existsSync(stamp)||readFileSync(stamp,'utf8')!==release) {
   if(existsSync('build/server/route-cache'))renameSync('build/server/route-cache',`.cache/navalha-previous-caches/${Date.now()}-${release}`);
   writeFileSync(stamp,release);
 }
-const dependencyHash=createHash('sha256').update(readFileSync('package.json')).update('\0').update(readFileSync('package-lock.json')).digest('hex');
+const dependencyHash=createHash('sha256').update(readFileSync('package.json')).update(Buffer.from([0])).update(readFileSync('package-lock.json')).digest('hex');
 const dependencyStamp='.cache/navalha-dependencies';
 if (!existsSync('node_modules/next/package.json')||!existsSync(dependencyStamp)||readFileSync(dependencyStamp,'utf8')!==dependencyHash) {
   const install=spawnSync('npm',['ci','--omit=dev','--no-audit','--no-fund'],{stdio:'inherit'});
